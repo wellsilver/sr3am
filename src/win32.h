@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <windows.h>
 
+unsigned int windows_len = 0;
+struct samImage_str **windows = NULL;
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
   switch (uMsg) {
     case WM_DESTROY:
@@ -52,15 +55,35 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
 
   ShowWindow(hwnd, SW_SHOWNORMAL);
 
-  samImage ret = malloc(sizeof(samImage));
+  struct samImage_str *ret = malloc(sizeof(struct samImage_str));
   ret->fd = hwnd;
+
+  // replace the list of windows with a new list of windows that has our window
+  unsigned int newwindow_len;
+  for (int loop=0;loop<windows_len;loop++)
+    if (windows[loop]->fd != NULL) 
+      newwindow_len++;
+  struct samImage_str **newwindow = malloc(sizeof(samImage)*newwindow_len);
+  int distinarg = 0;
+  for (int loop=0;loop<windows_len;loop++) {
+    if (windows[loop]->fd != NULL) {
+      newwindow[distinarg] = windows[loop];
+      distinarg++;
+    }
+  }
+  newwindow[distinarg] = ret;
+  free(windows);
+  windows_len = newwindow_len;
+  windows = newwindow;
+
+  return ret;
 }
 
 void samClose(samImage window) {
-  CloseWindow(window->fd);
+  CloseWindow(((struct samImage_str *) window)->fd);
   free(window);
 }
 
 unsigned int samClosing(samImage window) {
-  
+  return ((struct samImage_str *) window)->closing;
 }

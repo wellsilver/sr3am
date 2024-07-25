@@ -1,9 +1,11 @@
 #ifndef sr3am_types_h
 #define sr3am_types_h
 
-typedef struct samImage__ {
+struct samImage_str {
   void *fd;
-  char keys[128];
-} *samImage;
+  char closing;
+};
+
+typedef void * samImage;
 
 #endif

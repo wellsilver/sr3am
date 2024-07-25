@@ -7,16 +7,13 @@ int main() {
   samImage window = samWindow("SR3AM Pong", 480, 480, -1, -1, 0);
   // returns NULL if failed
   if (window == NULL) {
-    printf("Could not create window");
+    fwrite("Could not create window", 24, 1, stderr);
     return -1;
   }
 
   while (!samClosing(window)) {
     
-    
   }
-
-  sleep(5000);
 
   samClose(window);
 }
