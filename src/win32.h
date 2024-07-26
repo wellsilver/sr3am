@@ -2,12 +2,11 @@
 #include <stdio.h>
 #include <windows.h>
 
-unsigned int windows_len = 0;
-struct samImage_str **windows = NULL;
-
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+  struct samImage_str *window = GetPropA(hwnd, "SR3AM");
   switch (uMsg) {
     case WM_DESTROY:
+      window->closing = 1;
       return 0;
     case WM_PAINT:
       return 0;
@@ -17,7 +16,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
   return DefWindowProc(hwnd, uMsg, wParam, lParam);
 };
 
-samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32_t y) {
+samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32_t y, uint64_t hints) {
   const char CLASS_NAME[]  = "Window Class - SR3AM";
   
   WNDCLASS wc = {};
@@ -58,32 +57,16 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
   struct samImage_str *ret = malloc(sizeof(struct samImage_str));
   ret->fd = hwnd;
 
-  // replace the list of windows with a new list of windows that has our window
-  unsigned int newwindow_len;
-  for (int loop=0;loop<windows_len;loop++)
-    if (windows[loop]->fd != NULL) 
-      newwindow_len++;
-  struct samImage_str **newwindow = malloc(sizeof(samImage)*newwindow_len);
-  int distinarg = 0;
-  for (int loop=0;loop<windows_len;loop++) {
-    if (windows[loop]->fd != NULL) {
-      newwindow[distinarg] = windows[loop];
-      distinarg++;
-    }
-  }
-  newwindow[distinarg] = ret;
-  free(windows);
-  windows_len = newwindow_len;
-  windows = newwindow;
+  SetPropA(hwnd, "SR3AM", ret);
 
   return ret;
 }
 
-void samClose(samImage window) {
-  CloseWindow(((struct samImage_str *) window)->fd);
+void samClose(struct samImage_str *window) {
+  CloseWindow(window->fd);
   free(window);
 }
 
-unsigned int samClosing(samImage window) {
-  return ((struct samImage_str *) window)->closing;
+unsigned int samClosing(struct samImage_str *window) {
+  return window->closing;
 }
