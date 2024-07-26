@@ -13,8 +13,6 @@ extern int samClosing(samImage window);
 extern void samWait(samImage window);
 // Wait for something to happen
 extern void samWaitUser(samImage window);
-// Wait until directly after vertical blank
-extern void samWaitVsync(samImage window);
 // Try to hit some fps value. Records some global values to the window so multiple will not work
 extern void samWaitFPS(samImage window, unsigned int fps);
 

@@ -80,17 +80,12 @@ void samWait(struct samImage_str *window) {
   }
 }
 
-void samTargetUser(struct samImage_str *window) {
+void samWaitUser(struct samImage_str *window) {
   samWait(window);
 
 }
 
-void samTargetVsync(struct samImage_str *window) {
-  samWait(window);
-
-}
-
-void samTargetFPS(struct samImage_str *window, unsigned int fps) {
+void samWaitFPS(struct samImage_str *window, unsigned int fps) {
   samWait(window);
 
 }
