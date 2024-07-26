@@ -74,9 +74,9 @@ unsigned int samClosing(struct samImage_str *window) {
 
 void samWait(struct samImage_str *window) {
   MSG msg;
-  while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) {
+  while (PeekMessageA(&msg, window->fd, 0, 0, PM_REMOVE)) {
     TranslateMessage(&msg);
-    DispatchMessageW(&msg);
+    DispatchMessageA(&msg);
   }
 }
 
