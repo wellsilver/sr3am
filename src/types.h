@@ -3,7 +3,7 @@
 
 struct samImage_str {
   void *fd;
-  char closing;
+  unsigned int closing;
 };
 
 typedef void * samImage;
