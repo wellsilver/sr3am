@@ -71,3 +71,26 @@ void samClose(struct samImage_str *window) {
 unsigned int samClosing(struct samImage_str *window) {
   return window->closing;
 }
+
+void samWait(struct samImage_str *window) {
+  MSG msg;
+  while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) {
+    TranslateMessage(&msg);
+    DispatchMessageW(&msg);
+  }
+}
+
+void samTargetUser(struct samImage_str *window) {
+  samWait(window);
+
+}
+
+void samTargetVsync(struct samImage_str *window) {
+  samWait(window);
+
+}
+
+void samTargetFPS(struct samImage_str *window, unsigned int fps) {
+  samWait(window);
+
+}
