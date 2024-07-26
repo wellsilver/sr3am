@@ -64,6 +64,7 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
 
 void samClose(struct samImage_str *window) {
   CloseWindow(window->fd);
+  DestroyWindow(window->fd);
   free(window);
 }
 
