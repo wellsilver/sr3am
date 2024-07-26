@@ -16,7 +16,7 @@ extern void samWaitUser(samImage window);
 // Try to hit some fps value. Records some global values to the window so multiple will not work
 extern void samWaitFPS(samImage window, unsigned int fps);
 
-// Get the surface that sr3am uses
+// Get the surface that sr3am uses can be NULL
 extern void samVKSurface(samImage window,void *VKSurfacePTR);
 
 // Free's any resource individually
