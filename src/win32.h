@@ -5,6 +5,9 @@
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
   struct samImage_str *window = GetPropA(hwnd, "SR3AM");
   switch (uMsg) {
+    case WM_QUIT:
+      window->closing = 1;
+      return 0;
     case WM_DESTROY:
       window->closing = 1;
       return 0;
@@ -81,8 +84,12 @@ void samWait(struct samImage_str *window) {
 }
 
 void samWaitUser(struct samImage_str *window) {
-  samWait(window);
-
+  MSG msg;
+  while (PeekMessageA(&msg, window->fd, 0, 0, PM_REMOVE)) {
+    if (msg.message == WM_PAINT) return; // wm_paint should be called every time something happens, I dont know though
+    TranslateMessage(&msg);
+    DispatchMessageA(&msg);
+  }
 }
 
 void samWaitFPS(struct samImage_str *window, unsigned int fps) {
