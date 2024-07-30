@@ -13,7 +13,7 @@ int main() {
 
   while (!samClosing(window)) {
     
-    
+
     samWait(window);
   }
 

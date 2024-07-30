@@ -86,13 +86,8 @@ void samWait(struct samImage_str *window) {
 void samWaitUser(struct samImage_str *window) {
   MSG msg;
   while (PeekMessageA(&msg, window->fd, 0, 0, PM_REMOVE)) {
-    if (msg.message == WM_PAINT) return; // wm_paint should be called every time something happens, I dont know though
+    if (msg.message == WM_PAINT) return; // I think wm_paint was meant for this
     TranslateMessage(&msg);
     DispatchMessageA(&msg);
   }
-}
-
-void samWaitFPS(struct samImage_str *window, unsigned int fps) {
-  samWait(window);
-
 }
