@@ -1,6 +1,5 @@
 #include <sr3am.h>
 #include <stdio.h>
-#include <unistd.h>
 
 int main() {
   // create a window of 480*480 size at default position
