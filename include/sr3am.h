@@ -15,8 +15,10 @@ extern void samWait(samImage window);
 // Wait for something to happen
 extern void samWaitUser(samImage window);
 
-// Get the surface that sr3am uses. Can be NULL
-extern void samVKSurface(samImage window,void *VKSurfacePTR);
+// Get a writable pointer the pixels to a image, in rgb form. width and height can be NULL
+extern void *samPixels(uint32_t *width, uint32_t *height, samImage image);
+// New frame. This might resize a image's pixel buffer
+extern void samUpdate(samImage image);
 
 // Free's any resource individually
 extern void samFree(void *any);

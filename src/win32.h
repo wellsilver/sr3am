@@ -2,6 +2,15 @@
 #include <stdio.h>
 #include <windows.h>
 
+struct samImage_str {
+  void *fd;
+  unsigned int closing;
+
+  uint32_t width;
+  uint32_t height;
+  void *pixels;
+};
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
   struct samImage_str *window = GetPropA(hwnd, "SR3AM");
   switch (uMsg) {
@@ -14,6 +23,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     case WM_PAINT:
       return 0;
     case WM_SIZE:
+      UINT width = LOWORD(lParam);
+      UINT height = HIWORD(lParam);
+      window->width = width;
+      window->height = height;
+      window->pixels = realloc(window->pixels, (width*height)*3);      
       return 0;
   }
   return DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -55,12 +69,14 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
   );
   if (hwnd==NULL) return NULL;
 
-  ShowWindow(hwnd, SW_SHOWNORMAL);
-
   struct samImage_str *ret = malloc(sizeof(struct samImage_str));
   ret->fd = hwnd;
+  ret->pixels = malloc(1);
+  ret->closing = 0;
 
   SetPropA(hwnd, "SR3AM", ret);
+
+  ShowWindow(hwnd, SW_SHOWNORMAL);
 
   return ret;
 }
@@ -68,6 +84,7 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
 void samClose(struct samImage_str *window) {
   CloseWindow(window->fd);
   DestroyWindow(window->fd);
+  free(window->pixels);
   free(window);
 }
 
@@ -90,4 +107,24 @@ void samWaitUser(struct samImage_str *window) {
     TranslateMessage(&msg);
     DispatchMessageA(&msg);
   }
+}
+
+void *samPixels(uint32_t *width, uint32_t *height, struct samImage_str *window) {
+  if (width != NULL) width = &window->width;
+  if (height!= NULL) height= &window->height;
+  return window->pixels;
+}
+
+void samUpdate(struct samImage_str *window) {
+  WINBOOL err;
+  LPPAINTSTRUCT lppaint;
+  HDC hdc = BeginPaint(window->fd, lppaint);
+  HBITMAP bmp = CreateBitmap(window->width, window->height, 1, 24, window->pixels); // apparently this is slow, but its the easiest solution for now
+  HDC bithdc = CreateCompatibleDC(hdc);
+  SelectObject(bithdc, bmp);
+  BitBlt(hdc, 0, 0, window->width,window->height, bithdc, 0, 0, SRCCOPY);
+
+  DeleteObject(bmp);
+  DeleteDC(bithdc);
+  EndPaint(window->fd, lppaint);
 }
