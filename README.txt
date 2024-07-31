@@ -1,3 +1,3 @@
 # sr3am
 
-graphics n compute library
+a very very bad graphics library
