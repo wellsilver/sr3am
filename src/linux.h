@@ -13,6 +13,9 @@ struct samImage_str {
   Atom wm_protocols;
   Atom wm_deletewin;
 
+  Pixmap bitmap;
+  void *bitmapdata;
+
   int closing;
 };
 
@@ -20,12 +23,16 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
   unsigned long white,black;
   struct samImage_str *ret = malloc(sizeof(struct samImage_str));
 
+  if (x < 0 || y < 0) {x = 0;y = 0;}
+  if (width == 0 || height == 0) {width = 480;height = 480;}
+  int borderwidth=5;
+
 	ret->dis = XOpenDisplay((char *)0);
   ret->screen = DefaultScreen(ret->dis);
   black=BlackPixel(ret->dis, ret->screen),	/* get color black */
 	white=WhitePixel(ret->dis, ret->screen);  /* get color white */
-  ret->win=XCreateSimpleWindow(ret->dis,DefaultRootWindow(ret->dis),0,0,	
-  200, 300, 5, white, black);
+  ret->win=XCreateSimpleWindow(ret->dis,DefaultRootWindow(ret->dis),x,y,	
+  width, height, borderwidth, white, black);
   XSetStandardProperties(ret->dis, ret->win, name, "", None, NULL, 0, NULL);
   ret->gc=XCreateGC(ret->dis, ret->win, 0,0);
   XSetBackground(ret->dis,ret->gc,white);
