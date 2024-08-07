@@ -2,6 +2,7 @@
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 struct samImage_str {
   Display *dis;
@@ -34,7 +35,7 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
 	XMapRaised(ret->dis, ret->win);
 
   // setup with a window manager
-  ret->wm_protocols = XInternAtom(ret->dis, "WM_PROTOCOLS", False);
+  //ret->wm_protocols = XInternAtom(ret->dis, "WM_PROTOCOLS", False);
   ret->wm_deletewin = XInternAtom(ret->dis, "WM_DELETE_WINDOW", False);
   XSetWMProtocols(ret->dis, ret->win, &ret->wm_deletewin, 1);
 
@@ -52,11 +53,16 @@ void samClose(struct samImage_str *window) {
 
 void samWait(struct samImage_str *window) {
   XEvent event;
-  while (XCheckWindowEvent(window->dis,window->win,0,&event)) {
-    if (event.type == ClientMessage && event.xclient.message_type == window->wm_protocols && event.xclient.data.l[0] == window->wm_deletewin)
+  while (XPending(window->dis) > 0) {
+    XNextEvent(window->dis, &event);
+    if (event.type == ClientMessage && event.xclient.data.l[0] == window->wm_deletewin)
       window->closing = True;
-    
   }
+}
+
+void samWaitUser(struct samImage_str *window) {
+  XEvent event;
+  
 }
 
 int samClosing(struct samImage_str *window) {
