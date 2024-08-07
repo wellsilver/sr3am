@@ -62,7 +62,11 @@ void samWait(struct samImage_str *window) {
 
 void samWaitUser(struct samImage_str *window) {
   XEvent event;
-  
+  while (1) {
+    XNextEvent(window->dis, &event);
+    if (event.type == ClientMessage && event.xclient.data.l[0] == window->wm_deletewin)
+      window->closing = True;
+  }
 }
 
 int samClosing(struct samImage_str *window) {
