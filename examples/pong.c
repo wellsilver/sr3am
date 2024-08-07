@@ -1,7 +1,7 @@
 #include <sr3am.h>
 #include <stdio.h>
 
-struct rgb {uint8_t r,g,b;};
+struct rgb {uint8_t r,g,b,a;};
 
 int main() {
   // create a window of 480*480 size at default position
@@ -15,7 +15,6 @@ int main() {
   while (!samClosing(window)) {
     struct rgb *px = samPixels(NULL, NULL, window);
     px[5].r = 255;
-
     samUpdate(window);
     samWait(window);
   }

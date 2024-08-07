@@ -15,9 +15,9 @@ extern void samWait(samImage window);
 // Wait for something to happen
 extern void samWaitUser(samImage window);
 
-// Get a writable pointer the pixels to a image, in rgb form. width and height can be NULL
+// Get a writable pointer the pixels to a image, in traditional rgba with uint8's form. width and height can be NULL
 extern void *samPixels(uint32_t *width, uint32_t *height, samImage image);
-// New frame. This might resize a image's pixel buffer
+// New frame. This might invalidate the previous buffer from samPixels()
 extern void samUpdate(samImage image);
 
 // Free's any resource individually

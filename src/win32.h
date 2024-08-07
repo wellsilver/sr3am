@@ -27,7 +27,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       UINT height = HIWORD(lParam);
       window->width = width;
       window->height = height;
-      window->pixels = realloc(window->pixels, (width*height)*3);      
+      window->pixels = realloc(window->pixels, (width*height)*4);      
       return 0;
   }
   return DefWindowProc(hwnd, uMsg, wParam, lParam);
