@@ -22,6 +22,8 @@ struct samImage_str {
   uint32_t width;
   uint32_t height;
 
+  struct timeval lastf;
+
   int closing;
 };
 
@@ -59,6 +61,8 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
 
   ret->closing = 0;
 
+  gettimeofday(&ret->lastf, NULL);
+
   return ret;
 }
 
@@ -95,7 +99,6 @@ void *samPixels(uint32_t *width, uint32_t *height, struct samImage_str *image) {
 
 struct rgba {unsigned char r,g,b,a;};
 
-// This is purple?
 void samUpdate(struct samImage_str *window) {
   struct rgba *pixels = (struct rgba *) window->bitmapdata;
   for (int loop=0;loop<window->width*window->height;loop++) {
@@ -107,6 +110,28 @@ void samUpdate(struct samImage_str *window) {
   XImage *ximage = XCreateImage(window->dis, window->vis, DefaultDepth(window->dis,window->screen), ZPixmap, 0, (char *) pixels, window->width, window->height, 32, 0);
   XPutImage(window->dis, window->win, window->gc, ximage, 0, 0, 0, 0, window->width, window->height);
   memset(pixels, 0, window->width*window->height*4);
+}
+
+uint64_t samUpdatePerf(struct samImage_str *window) {
+  struct rgba *pixels = (struct rgba *) window->bitmapdata;
+  for (int loop=0;loop<window->width*window->height;loop++) {
+    unsigned char r = pixels[loop].r;
+    unsigned char b = pixels[loop].b;
+    pixels[loop].b = r;
+    pixels[loop].r = b;
+  }
+  XImage *ximage = XCreateImage(window->dis, window->vis, DefaultDepth(window->dis,window->screen), ZPixmap, 0, (char *) pixels, window->width, window->height, 32, 0);
+  XPutImage(window->dis, window->win, window->gc, ximage, 0, 0, 0, 0, window->width, window->height);
+  memset(pixels, 0, window->width*window->height*4);
+
+  // get time
+  struct timeval t1;
+  gettimeofday(&t1, NULL);
+  uint64_t timetaken = ((t1.tv_sec - window->lastf.tv_sec) * 1000000) + (t1.tv_usec - window->lastf.tv_usec); // ((current seconds - previous seconds) -> usec) + (current usec - last usec)
+  window->lastf = t1;
+
+  // return the ammount of time inbetween last frame and the end of this one in usec's
+  return timetaken;
 }
 
 /*

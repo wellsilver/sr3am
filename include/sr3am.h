@@ -19,6 +19,8 @@ extern void samWaitUser(samImage window);
 extern void *samPixels(uint32_t *width, uint32_t *height, samImage image);
 // New frame. This might invalidate the previous buffer from samPixels()
 extern void samUpdate(samImage image);
+// New frame. Exact same as samUpdate but returns the ammonut of time it took to generate this frame. If no previous frame it uses window creation
+extern uint64_t samUpdatePerf(samImage image);
 
 // Free's any resource individually
 extern void samFree(void *any);
