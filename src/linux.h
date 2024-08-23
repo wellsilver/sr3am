@@ -15,7 +15,7 @@ struct samImage_str {
   Atom wm_deletewin;
 
   Pixmap bitmap;
-  void *bitmapdata;
+  unsigned char *bitmapdata;
   uint32_t width;
   uint32_t height;
 
@@ -42,7 +42,7 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
 	XSetForeground(ret->dis,ret->gc,black);
   ret->vis = DefaultVisual(ret->dis, 0);
 
-	XClearWindow(ret->dis, ret->win);
+	//XClearWindow(ret->dis, ret->win);
 	XMapRaised(ret->dis, ret->win);
 
   // setup with a window manager
@@ -90,12 +90,35 @@ void *samPixels(uint32_t *width, uint32_t *height, struct samImage_str *image) {
   return image->bitmapdata;
 }
 
+struct rgba {unsigned char r,g,b,a;};
+
+// This is purple?
 void samUpdate(struct samImage_str *window) {
-  XImage *ximage = XCreateImage(window->dis, window->vis, DefaultDepth(window->dis,window->screen), ZPixmap, 0, window->bitmapdata, window->width, window->height, 32, 0);
-  //XImage *ximage = CreateTrueColorImage(window->dis, window->vis, 0, window->width, window->height);
+  struct rgba *pixels = (struct rgba *) window->bitmapdata;
+  for (int loop=0;loop<window->width*window->height;loop++) {
+    unsigned char r = pixels[loop].r;
+    unsigned char b = pixels[loop].b;
+    pixels[loop].b = r;
+    pixels[loop].r = b;
+  }
+  XImage *ximage = XCreateImage(window->dis, window->vis, DefaultDepth(window->dis,window->screen), ZPixmap, 0, (char *) pixels, window->width, window->height, 32, 0);
   XPutImage(window->dis, window->win, window->gc, ximage, 0, 0, 0, 0, window->width, window->height);
-  
+  for (int loop=0;loop<window->width*window->height;loop++)
+    ((uint32_t *) pixels)[loop] = 0;
 }
+
+/*
+void samUpdate(struct samImage_str *window) {
+  struct rgba *pixels = (struct rgba *) window->bitmapdata;
+  struct rgba *newpixels = malloc(window->width*window->height*4);
+  for (int loop=0;loop<window->width*window->height;loop++) {
+    newpixels[loop].b = pixels[loop].r;
+    newpixels[loop].r = pixels[loop].b;
+  }
+  XImage *ximage = XCreateImage(window->dis, window->vis, DefaultDepth(window->dis,window->screen), ZPixmap, 0, (char *) newpixels, window->width, window->height, 32, 0);
+  XPutImage(window->dis, window->win, window->gc, ximage, 0, 0, 0, 0, window->width, window->height);
+  free(newpixels);
+}*/
 
 int samClosing(struct samImage_str *window) {
   return window->closing;
