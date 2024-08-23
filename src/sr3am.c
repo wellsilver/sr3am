@@ -8,7 +8,7 @@
 #include "win32.h"
 #endif
 #ifdef __linux__
-#include "linux.h"
+#include "x11.h"
 #endif
 // ..
 

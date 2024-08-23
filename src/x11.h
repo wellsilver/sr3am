@@ -1,3 +1,6 @@
+#ifndef x11_h
+#define x11_h
+
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
@@ -122,3 +125,5 @@ void samUpdate(struct samImage_str *window) {
 int samClosing(struct samImage_str *window) {
   return window->closing;
 }
+
+#endif
