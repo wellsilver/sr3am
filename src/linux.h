@@ -103,7 +103,7 @@ void samUpdate(struct samImage_str *window) {
   }
   XImage *ximage = XCreateImage(window->dis, window->vis, DefaultDepth(window->dis,window->screen), ZPixmap, 0, (char *) pixels, window->width, window->height, 32, 0);
   XPutImage(window->dis, window->win, window->gc, ximage, 0, 0, 0, 0, window->width, window->height);
-  memset(pixels, 0, window->width*window->height);
+  memset(pixels, 0, window->width*window->height*4);
 }
 
 /*
