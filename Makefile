@@ -1,7 +1,7 @@
 cc = gcc
 
 ifeq ($(OS),Windows_NT)
-lib = -l gdi+
+lib = -l gdi32
 else
 lib = -l X11
 endif
