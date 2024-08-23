@@ -10,8 +10,10 @@ int main() {
     return -1;
   }
 
-  while (!samClosing(window))
+  while (!samClosing(window)) {
+
     samWait(window);
+  }
 
   samClose(window);
 }
