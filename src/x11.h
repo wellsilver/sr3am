@@ -19,10 +19,12 @@ struct samImage_str {
 
   Pixmap bitmap;
   unsigned char *bitmapdata;
-  uint32_t width;
-  uint32_t height;
+  uint32_t width,nwidth;   // the new width
+  uint32_t height,nheight; // the new height
 
   struct timeval lastf;
+
+  int outofdate;
 
   int closing;
 };
@@ -39,13 +41,18 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
   ret->screen = DefaultScreen(ret->dis);
   black=BlackPixel(ret->dis, ret->screen),	/* get color black */
 	white=WhitePixel(ret->dis, ret->screen);  /* get color white */
-  ret->win=XCreateSimpleWindow(ret->dis,DefaultRootWindow(ret->dis),x,y,	
-  width, height, borderwidth, white, black);
+  ret->vis = DefaultVisual(ret->dis, 0);
+  XSetWindowAttributes wat = { 0 }; // Window ATribbutes, lmao
+  wat.colormap = XCreateColormap(ret->dis, DefaultRootWindow(ret->dis), ret->vis, AllocNone);
+  wat.event_mask = StructureNotifyMask | KeyPressMask | KeyReleaseMask |
+                  PointerMotionMask | ButtonPressMask | ButtonReleaseMask |
+                  ExposureMask | FocusChangeMask | VisibilityChangeMask |
+                  EnterWindowMask | LeaveWindowMask | PropertyChangeMask;
+  ret->win=XCreateWindow(ret->dis,DefaultRootWindow(ret->dis),x,y, width, height, 0, DefaultDepth(ret->dis, 0), InputOutput, ret->vis, CWBorderPixel | CWColormap | CWEventMask, &wat);
   XSetStandardProperties(ret->dis, ret->win, name, "", None, NULL, 0, NULL);
   ret->gc=XCreateGC(ret->dis,ret->win,0,0);
   XSetBackground(ret->dis,ret->gc,white);
 	XSetForeground(ret->dis,ret->gc,black);
-  ret->vis = DefaultVisual(ret->dis, 0);
 
 	//XClearWindow(ret->dis, ret->win);
 	XMapRaised(ret->dis, ret->win);
@@ -60,6 +67,8 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
   ret->height = height;
 
   ret->closing = 0;
+
+  ret->outofdate = 0;
 
   gettimeofday(&ret->lastf, NULL);
 
@@ -79,6 +88,11 @@ void samWait(struct samImage_str *window) {
     XNextEvent(window->dis, &event);
     if (event.type == ClientMessage && event.xclient.data.l[0] == window->wm_deletewin)
       window->closing = True;
+    if (event.type == ConfigureNotify) {
+      window->outofdate = 1;
+      window->nwidth = event.xconfigure.width;
+      window->nheight= event.xconfigure.height;
+    }
   }
 }
 
@@ -88,6 +102,11 @@ void samWaitUser(struct samImage_str *window) {
     XNextEvent(window->dis, &event);
     if (event.type == ClientMessage && event.xclient.data.l[0] == window->wm_deletewin)
       window->closing = True;
+    if (event.type == ConfigureNotify) {
+      window->outofdate = 1;
+      window->nwidth = event.xconfigure.width;
+      window->nheight= event.xconfigure.height;
+    }
   }
 }
 
@@ -110,6 +129,16 @@ void samUpdate(struct samImage_str *window) {
   XImage *ximage = XCreateImage(window->dis, window->vis, DefaultDepth(window->dis,window->screen), ZPixmap, 0, (char *) pixels, window->width, window->height, 32, 0);
   XPutImage(window->dis, window->win, window->gc, ximage, 0, 0, 0, 0, window->width, window->height);
   memset(pixels, 0, window->width*window->height*4);
+
+  if (window->outofdate) {
+    // will haved to create a new image
+    free(window->bitmapdata);
+    window->width = window->nwidth;
+    window->height = window->nheight;
+    window->bitmapdata = malloc(window->width*window->height*4);
+    window->outofdate = 0;
+  }
+  XFlush(window->dis);
 }
 
 uint64_t samUpdatePerf(struct samImage_str *window) {
@@ -130,6 +159,15 @@ uint64_t samUpdatePerf(struct samImage_str *window) {
   uint64_t timetaken = ((t1.tv_sec - window->lastf.tv_sec) * 1000000) + (t1.tv_usec - window->lastf.tv_usec); // ((current seconds - previous seconds) -> usec) + (current usec - last usec)
   window->lastf = t1;
 
+  if (window->outofdate) {
+    // will haved to create a new image
+    free(window->bitmapdata);
+    window->width = window->nwidth;
+    window->height = window->nheight;
+    window->bitmapdata = malloc(window->width*window->height*4);
+    window->outofdate = 0;
+  }
+  XFlush(window->dis);
   // return the ammount of time inbetween last frame and the end of this one in usec's
   return timetaken;
 }
