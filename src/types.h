@@ -3,4 +3,8 @@
 
 typedef void * samImage;
 
+enum samwindowhint {
+  SAMHINTBLANK=0,
+};
+
 #endif

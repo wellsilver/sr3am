@@ -26,6 +26,8 @@ struct samImage_str {
 
   int outofdate;
 
+  uint64_t hints;
+
   int closing;
 };
 
@@ -35,8 +37,11 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
 
   if (x < 0 || y < 0) {x = 0;y = 0;}
   if (width == 0 || height == 0) {width = 480;height = 480;}
-  int borderwidth=5;
+  int borderwidth=0;
 
+  ret->hints = hints;
+
+  // I just learned that what this does is open a connection to the x server, lets hope a new connection per window isnt bad
 	ret->dis = XOpenDisplay((char *)0);
   ret->screen = DefaultScreen(ret->dis);
   black=BlackPixel(ret->dis, ret->screen),	/* get color black */
