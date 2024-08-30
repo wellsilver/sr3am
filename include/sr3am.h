@@ -1,10 +1,13 @@
 #include <stdint.h>
 
-typedef void * samImage;
+// sam window system
 
 enum samwindowhint {
   SAMHINT_staticsize=1,
 };
+
+typedef void * samImage;
+
 
 // Create a new window with width, height, x, y. If width/height is zero or x/y is less than zero they are replaced with some default value. The returned image can be NULL
 extern samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32_t y, uint64_t hints);
@@ -30,3 +33,6 @@ extern uint64_t samUpdatePerf(samImage image);
 extern void samFree(void *any);
 // Free's all resources at once
 extern void samCleanup();
+
+// 2d accelerated rendering
+

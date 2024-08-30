@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "types.h"
 
-#include "ocl2d.h"
+#include "2d.h"
 
 #ifdef _WIN32
 #include "win32.h"
