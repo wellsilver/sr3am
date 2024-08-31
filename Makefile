@@ -18,3 +18,4 @@ lib:
 examples:
 	gcc examples/blank.c -o blank.o sr3am.o -I include $(lib)
 	gcc examples/pong.c -o pong.o sr3am.o -I include $(lib)
+	gcc examples/opencl.c -o opencl.o sr3am.o -I include $(lib) -l OpenCL
