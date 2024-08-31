@@ -48,21 +48,23 @@ int main() {
   compixel = clCreateKernel(program, "pixel", &err);
   if (err != CL_SUCCESS) return -7;
 
-  cl_mem pixelgpu = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 480*480*4, NULL, &err);
-  if (err) return -8;
-
-  err = clSetKernelArg(compixel, 0, sizeof(cl_mem), &pixelgpu);
-  if (err != CL_SUCCESS) return -9;
-
   size_t worksize = 1;
 
   // draw
   struct rgba *img;
   uint32_t width, height;
 
+  cl_mem pixelgpu;
+
   while (!samClosing(win)) {
     img = samPixels(&width, &height, win);
 
+    // create buffer
+    cl_mem pixelgpu = clCreateBuffer(context, CL_MEM_WRITE_ONLY, width*height*4, NULL, &err);
+    if (err != CL_SUCCESS) return -8;
+    err = clSetKernelArg(compixel, 0, sizeof(cl_mem), &pixelgpu);
+    if (err != CL_SUCCESS) return -9;
+    
     worksize = width*height;
     err = clEnqueueNDRangeKernel(commandq, compixel, 1, NULL, &worksize, NULL, 0, NULL, NULL);
     if (err != CL_SUCCESS) printf("enqeuendrangekernel\n");
