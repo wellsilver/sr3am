@@ -72,6 +72,8 @@ int main() {
     err = clEnqueueReadBuffer(commandq, pixelgpu, CL_TRUE, 0, width*height*4, img, 0, NULL, NULL);
     if (err != CL_SUCCESS) printf("enqueuewritebuffer\n");
 
+    clReleaseMemObject(pixelgpu);
+    
     samUpdate(win);
     samWait(win);
   }
