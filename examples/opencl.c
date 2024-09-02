@@ -31,10 +31,10 @@ __kernel void pixel(__global struct rgba *img, __global unsigned int *width, __g
     cos(vertical) * cos(horizontal)
   };
 
-  float3 cam = {500,500,500}; // xyz camera, z=up
+  float3 cam = {100,100,100}; // xyz camera, z=up
   for (uint dist = 0;dist<255;dist++) {
     cam += ray_direction;
-    if (cam.y < 400) {img[i].r = dist;return;};
+    if (cam.y < (sin(cam.x/5)+sin(cam.z/5))*10) {img[i].r = dist;return;};
   }
 };
 )";
