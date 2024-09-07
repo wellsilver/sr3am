@@ -82,29 +82,25 @@ void samClose(struct samImage_str *window) {
   free(window);
 }
 
-// return false if user event, true if etc
-inline int poll(struct samImage_str *window) {
-  XEvent event;
-  XNextEvent(window->dis, &event);
-  if (event.type == ClientMessage && event.xclient.data.l[0] == window->wm_deletewin)
-    window->closing = True;
-  if (event.type == ConfigureNotify) {
-    window->outofdate = 1;
-    window->nwidth = event.xconfigure.width;
-    window->nheight= event.xconfigure.height;
-  }
-  if (event.type == KeyPress) {
-    
-  }
-  return 1;
-}
-
 void samWait(struct samImage_str *window) {
-  while (XPending(window->dis) > 0) poll(window);
+  XEvent event;
+  while (XPending(window->dis) > 0) {
+    XNextEvent(window->dis, &event);
+    if (event.type == ClientMessage && event.xclient.data.l[0] == window->wm_deletewin)
+      window->closing = True;
+    if (event.type == ConfigureNotify) {
+      window->outofdate = 1;
+      window->nwidth = event.xconfigure.width;
+      window->nheight= event.xconfigure.height;
+    }
+    if (event.type == KeyPress) {
+      
+    }
+  }
 }
 
 void samWaitUser(struct samImage_str *window) {
-  while (poll(window));
+  //while (poll(window));
 }
 
 void *samPixels(uint32_t *width, uint32_t *height, struct samImage_str *image) {
