@@ -93,6 +93,9 @@ void samWait(struct samImage_str *window) {
       window->nwidth = event.xconfigure.width;
       window->nheight= event.xconfigure.height;
     }
+    if (event.type == KeyPress) {
+      
+    }
   }
 }
 
@@ -106,6 +109,9 @@ void samWaitUser(struct samImage_str *window) {
       window->outofdate = 1;
       window->nwidth = event.xconfigure.width;
       window->nheight= event.xconfigure.height;
+    }
+    if (event.type == KeyPress) {
+      
     }
   }
 }
