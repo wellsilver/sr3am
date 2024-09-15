@@ -93,9 +93,11 @@ void samWait(struct samImage_str *window) {
       window->nwidth = event.xconfigure.width;
       window->nheight= event.xconfigure.height;
     }
+    /* TODO
     if (event.type == KeyPress) {
-      
+      printf("%i\n",event.xkey.keycode);
     }
+    */
   }
 }
 
@@ -110,9 +112,11 @@ void samWaitUser(struct samImage_str *window) {
       window->nwidth = event.xconfigure.width;
       window->nheight= event.xconfigure.height;
     }
+    /* TODO
     if (event.type == KeyPress) {
-      
+      printf("%i\n",event.xkey.keycode);
     }
+    */
   }
 }
 
