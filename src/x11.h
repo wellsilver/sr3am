@@ -38,6 +38,7 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
   int borderwidth=5;
 
 	ret->dis = XOpenDisplay((char *)0);
+  if (ret->dis == 0) return NULL;
   ret->screen = DefaultScreen(ret->dis);
   black=BlackPixel(ret->dis, ret->screen),	/* get color black */
 	white=WhitePixel(ret->dis, ret->screen);  /* get color white */
