@@ -83,42 +83,30 @@ void samClose(struct samImage_str *window) {
   free(window);
 }
 
+void proccessevent(struct samImage_str *window, XEvent event) {
+  XNextEvent(window->dis, &event);
+  if (event.type == ClientMessage && event.xclient.data.l[0] == window->wm_deletewin)
+    window->closing = True;
+  if (event.type == ConfigureNotify) {
+    window->outofdate = 1;
+    window->nwidth = event.xconfigure.width;
+    window->nheight= event.xconfigure.height;
+  }
+  /* TODO
+  if (event.type == KeyPress) {
+    printf("%i\n",event.xkey.keycode);
+  }
+  */
+}
+
 void samWait(struct samImage_str *window) {
   XEvent event;
-  while (XPending(window->dis) > 0) {
-    XNextEvent(window->dis, &event);
-    if (event.type == ClientMessage && event.xclient.data.l[0] == window->wm_deletewin)
-      window->closing = True;
-    if (event.type == ConfigureNotify) {
-      window->outofdate = 1;
-      window->nwidth = event.xconfigure.width;
-      window->nheight= event.xconfigure.height;
-    }
-    /* TODO
-    if (event.type == KeyPress) {
-      printf("%i\n",event.xkey.keycode);
-    }
-    */
-  }
+  while (XPending(window->dis) > 0) proccessevent(window, event);
 }
 
 void samWaitUser(struct samImage_str *window) {
   XEvent event;
-  while (1) {
-    XNextEvent(window->dis, &event);
-    if (event.type == ClientMessage && event.xclient.data.l[0] == window->wm_deletewin)
-      window->closing = True;
-    if (event.type == ConfigureNotify) {
-      window->outofdate = 1;
-      window->nwidth = event.xconfigure.width;
-      window->nheight= event.xconfigure.height;
-    }
-    /* TODO
-    if (event.type == KeyPress) {
-      printf("%i\n",event.xkey.keycode);
-    }
-    */
-  }
+  while (1) proccessevent(window, event);
 }
 
 void *samPixels(uint32_t *width, uint32_t *height, struct samImage_str *image) {

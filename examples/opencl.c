@@ -90,16 +90,16 @@ __kernel void pixel(__global struct rgba *img, __global unsigned int *width, __g
     sin(vertical),
     cos(vertical) * cos(horizontal)
   };
-  float rd = 8; // distance
+  float rd = 4; // distance
 
-  float cam[3] = {100,500,100}; // xyz camera, z=up
+  float cam[3] = {100,300,100}; // xyz camera, z=up
   for (unsigned int dist = 0;dist<255*rd;dist++) {
     cam[0] += ray_direction[0];
     cam[1] += ray_direction[1];
     cam[2] += ray_direction[2];
     //if (cam[1] < (sin(cam[0]/25)+cos(cam[2]/25))*30) {img[i].r = dist/rd;break;};
     //if (cam[1] < (sin(cam[0]/25)+cos(cam[2]/25))*30) {img[i].r = cam[1]+90;break;}
-    if (cam[1] < noise2d(cam[0]/100,cam[2]/100)) {img[i].r = cam[1];break;}
+    if (cam[1] < noise2(cam[0]/100,cam[2]/100)) {img[i].r = cam[1];break;}
   }
 };
 
