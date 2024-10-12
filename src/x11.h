@@ -26,6 +26,10 @@ struct samImage_str {
 
   int outofdate;
 
+  char keys[8]; // max of 8 keys being pressed, most keyboards are less than 4 so.
+  uint32_t mousex;
+  uint32_t mousey;
+
   int closing;
 };
 
@@ -71,6 +75,10 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
 
   ret->outofdate = 0;
 
+  for (int loop=0;loop<8;loop++) ret->keys[loop] = 0;
+  ret->mousex = 0;
+  ret->mousey = 0;
+
   gettimeofday(&ret->lastf, NULL);
 
   return ret;
@@ -92,11 +100,13 @@ void proccessevent(struct samImage_str *window, XEvent event) {
     window->nwidth = event.xconfigure.width;
     window->nheight= event.xconfigure.height;
   }
-  /* TODO
+  if (event.type == MotionNotify) {
+    window->mousex = event.xmotion.x;
+    window->mousey = event.xmotion.y;
+  }
   if (event.type == KeyPress) {
     printf("%i\n",event.xkey.keycode);
   }
-  */
 }
 
 void samWait(struct samImage_str *window) {
@@ -107,6 +117,11 @@ void samWait(struct samImage_str *window) {
 void samWaitUser(struct samImage_str *window) {
   XEvent event;
   while (1) proccessevent(window, event);
+}
+
+void samMouse(struct samImage_str *window, uint32_t *mx, uint32_t *my) {
+  if (mx != NULL) *mx = window->mousex;
+  if (my != NULL) *my = window->mousey;
 }
 
 void *samPixels(uint32_t *width, uint32_t *height, struct samImage_str *image) {
