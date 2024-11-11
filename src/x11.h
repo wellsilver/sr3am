@@ -105,7 +105,7 @@ void proccessevent(struct samImage_str *window, XEvent event) {
     window->mousey = event.xmotion.y;
   }
   if (event.type == KeyPress) {
-    printf("%i\n",event.xkey.keycode);
+    
   }
 }
 
