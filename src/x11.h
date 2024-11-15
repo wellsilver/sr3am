@@ -119,6 +119,10 @@ void samWaitUser(struct samImage_str *window) {
   while (1) proccessevent(window, event);
 }
 
+unsigned int samkey(struct samImage_str *window) {
+  for (unsigned int loop = 0;loop<8;loop++) if (window->keys[loop] != 0) return window->keys[loop];
+}
+
 void samMouse(struct samImage_str *window, uint32_t *mx, uint32_t *my) {
   if (mx != NULL) *mx = window->mousex;
   if (my != NULL) *my = window->mousey;
