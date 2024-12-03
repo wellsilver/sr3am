@@ -4,6 +4,7 @@
 typedef void * samImage;
 
 enum samKeys {
+  sam_null = 0.
   sam_0 = '0',
   sam_1 = '1',
   sam_2 = '2',
