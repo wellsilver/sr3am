@@ -69,4 +69,4 @@ enum samKeys {
 	sam_y = 'y',
 	sam_z = 'z',
   // TODO: MORE KEYS
-}
+};

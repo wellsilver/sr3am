@@ -107,6 +107,9 @@ void proccessevent(struct samImage_str *window, XEvent event) {
   if (event.type == KeyPress)
     for (unsigned int loop=0;loop<8;loop++)
       if (window->keys[loop] == 0) window->keys[loop] = event.xkey.keycode;
+  if (event.type == KeyRelease)
+    for (unsigned int loop=0;loop<8;loop++)
+      if (window->keys[loop] == event.xkey.keycode) window->keys[loop] = 0;
 }
 
 void samWait(struct samImage_str *window) {
