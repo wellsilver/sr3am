@@ -16,6 +16,8 @@ lib:
 #	gcc -o $<.o $< -I include sr3am $(lib) -g
 
 examples:
-	gcc examples/blank.c -o blank.o sr3am.o -I include $(lib)
-	gcc examples/pong.c -o pong.o sr3am.o -I include $(lib)
-	gcc examples/opencl.c -o opencl.o sr3am.o -I include $(lib) -l OpenCL
+	gcc examples/blank.c -o blank.o sr3am.o -I include $(lib) -g
+	gcc examples/pong.c -o pong.o sr3am.o -I include $(lib) -g
+	ld -r -o embeds.o -z noexecstack -b binary examples/opencl.cl
+	objcopy --rename-section .data=.rodata,alloc,load,readonly,data,contents embeds.o
+	gcc examples/opencl.c -o opencl.o sr3am.o embeds.o -I include $(lib) -l OpenCL -g
