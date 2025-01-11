@@ -173,11 +173,10 @@ void samUpdate(struct samImage_str *window) {
   memset(pixels, 0, window->width*window->height*4);
 
   if (window->outofdate) {
-    // will haved to create a new image
-    free(window->bitmapdata);
+    // will haved to resize the image
     window->width = window->nwidth;
     window->height = window->nheight;
-    window->bitmapdata = malloc(window->width*window->height*4);
+    window->bitmapdata = realloc(window->bitmapdata, window->width*window->height*4);
     window->outofdate = 0;
   }
   XFlush(window->dis);

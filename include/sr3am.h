@@ -13,7 +13,7 @@ extern int samClosing(samImage window);
 // Mouse position relative to window
 extern void samMouse(samImage window, uint32_t *mouseX, uint32_t *mouseY);
 
-// Get the last key written (samKeys enum), This draws from a buffer (0 if no key pressed)
+// Get the last key pressed (negative if key is released, positive if key is pressed)
 extern int32_t samKey(samImage window);
 
 // Wait for nothing, polls events
