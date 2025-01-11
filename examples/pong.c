@@ -13,7 +13,9 @@ int main() {
   while (!samClosing(window)) {
     struct rgba *px = samPixels(NULL, NULL, window);
 
-    
+    int32_t r = samKey(window);
+    if (r > 0) printf("key press: %i\n", r);
+    if (r < 0) printf("key release: %i\n", r);
 
     samUpdate(window);
     samWait(window);

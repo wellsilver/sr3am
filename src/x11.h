@@ -26,7 +26,8 @@ struct samImage_str {
 
   int outofdate;
 
-  char keys[8]; // max of 8 keys being pressed, most keyboards are less than 4 so.
+  unsigned long long sizekeys; // size of the keys buffer
+  int32_t *keys; // max of 8 keys being pressed, most keyboards are less than 4 so.
   uint32_t mousex;
   uint32_t mousey;
 
@@ -61,7 +62,7 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
 
 	//XClearWindow(ret->dis, ret->win);
 	XMapRaised(ret->dis, ret->win);
-
+  
   // setup with a window manager
   //ret->wm_protocols = XInternAtom(ret->dis, "WM_PROTOCOLS", False);
   ret->wm_deletewin = XInternAtom(ret->dis, "WM_DELETE_WINDOW", False);
@@ -71,11 +72,13 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
   ret->width = width;
   ret->height = height;
 
+  ret->keys = malloc(0);
+  ret->sizekeys = 0;
+
   ret->closing = 0;
 
   ret->outofdate = 0;
 
-  for (int loop=0;loop<8;loop++) ret->keys[loop] = 0;
   ret->mousex = 0;
   ret->mousey = 0;
 
@@ -104,12 +107,25 @@ void proccessevent(struct samImage_str *window, XEvent event) {
     window->mousex = event.xmotion.x;
     window->mousey = event.xmotion.y;
   }
-  if (event.type == KeyPress)
-    for (unsigned int loop=0;loop<8;loop++)
-      if (window->keys[loop] == 0) window->keys[loop] = event.xkey.keycode;
-  if (event.type == KeyRelease)
-    for (unsigned int loop=0;loop<8;loop++)
-      if (window->keys[loop] == event.xkey.keycode) window->keys[loop] = 0;
+  // Append the new key to the buffer
+  if (event.type == KeyPress) {
+    window->sizekeys++;
+    window->keys = (void *) realloc(window->keys, ((window->sizekeys * 4)));
+    window->keys[window->sizekeys-1] = event.xkey.keycode;
+  }
+  if (event.type == KeyRelease) {
+    if (window->sizekeys == 0) return;
+    // if the key has been pressed (but hanst been removed from the stack/buffer yet)
+    for (uint32_t loop=0;loop<window->sizekeys;loop++)
+      if ((uint32_t) window->keys[loop] == event.xkey.keycode) {
+        window->keys[loop] = -window->keys[loop];
+        return;
+      }
+    // if it has been removed from the stack/buffer  (or the user is depressing it on this window) simply add it
+    window->sizekeys++;
+    window->keys = (void *) realloc(window->keys, ((window->sizekeys * 4)));
+    window->keys[window->sizekeys-1] = -event.xkey.keycode;
+  }
 }
 
 void samWait(struct samImage_str *window) {
@@ -122,8 +138,13 @@ void samWaitUser(struct samImage_str *window) {
   while (1) proccessevent(window, event);
 }
 
-unsigned int samkey(struct samImage_str *window) {
-  for (unsigned int loop = 0;loop<8;loop++) if (window->keys[loop] != 0) return window->keys[loop];
+int32_t samKey(struct samImage_str *window) {
+  // Return the key from the top of the loop and shift down
+  if (window->sizekeys == 0) return sam_null; // no key pressed
+  window->sizekeys--;
+  int32_t ret = window->keys[window->sizekeys];
+  window->keys = realloc(window->keys, (window->sizekeys * 4));
+  return ret;
 }
 
 void samMouse(struct samImage_str *window, uint32_t *mx, uint32_t *my) {
