@@ -114,7 +114,6 @@ void proccessevent(struct samImage_str *window, XEvent event) {
     window->keys[window->sizekeys-1] = event.xkey.keycode;
   }
   if (event.type == KeyRelease) {
-    if (window->sizekeys == 0) return;
     // if the key has been pressed (but hanst been removed from the stack/buffer yet)
     for (uint32_t loop=0;loop<window->sizekeys;loop++)
       if ((uint32_t) window->keys[loop] == event.xkey.keycode) {
