@@ -58,26 +58,21 @@ int main() {
   struct rgba *img;
   uint32_t width, height;
 
-  cl_mem pixelgpu;
+  cl_mem pixelgpu = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 10000000*4, NULL, &err); // 40 megabytes (slighty more than enough for a 4k image)
+  cl_mem widthgpu = clCreateBuffer(context, CL_MEM_READ_ONLY, 4, NULL, &err);
+  cl_mem heightgpu = clCreateBuffer(context, CL_MEM_READ_ONLY, 4, NULL, &err);
+  err = clSetKernelArg(compixel, 0, sizeof(cl_mem), &pixelgpu);
+  err = clSetKernelArg(compixel, 1, sizeof(cl_mem), &widthgpu);
+  err = clSetKernelArg(compixel, 2, sizeof(cl_mem), &heightgpu);
 
   while (!samClosing(win)) {
     img = samPixels(&width, &height, win);
 
-    // create buffer
-    cl_mem pixelgpu = clCreateBuffer(context, CL_MEM_WRITE_ONLY, width*height*4, NULL, &err);
-    if (err != CL_SUCCESS) return -8;
-    err = clSetKernelArg(compixel, 0, sizeof(cl_mem), &pixelgpu);
-    if (err != CL_SUCCESS) return -9;
-    cl_mem widthgpu = clCreateBuffer(context, CL_MEM_READ_ONLY, 4, NULL, &err);
+    // setup buffers
     clEnqueueWriteBuffer(commandq, widthgpu, CL_TRUE, 0, 4, &width, 0, NULL, NULL);
     if (err != CL_SUCCESS) return -8;
-    err = clSetKernelArg(compixel, 1, sizeof(cl_mem), &widthgpu);
-    if (err != CL_SUCCESS) return -9;
-    cl_mem heightgpu = clCreateBuffer(context, CL_MEM_READ_ONLY, 4, NULL, &err);
     clEnqueueWriteBuffer(commandq, heightgpu, CL_TRUE, 0, 4, &height, 0, NULL, NULL);
     if (err != CL_SUCCESS) return -8;
-    err = clSetKernelArg(compixel, 2, sizeof(cl_mem), &heightgpu);
-    if (err != CL_SUCCESS) return -9;
     
     worksize[0] = width;
     worksize[1] = height;
@@ -86,13 +81,13 @@ int main() {
     err = clEnqueueReadBuffer(commandq, pixelgpu, CL_TRUE, 0, width*height*4, img, 0, NULL, NULL);
     if (err != CL_SUCCESS) printf("enqueuereadbuffer %i\n", err);
 
-    clReleaseMemObject(pixelgpu);
-    clReleaseMemObject(widthgpu);
-    clReleaseMemObject(heightgpu);
-
-    samUpdate(win);
+    samUpdatePerf(win, 1);
     samWait(win);
   }
+
+  clReleaseMemObject(pixelgpu);
+  clReleaseMemObject(widthgpu);
+  clReleaseMemObject(heightgpu);
 
   samClose(win);
 }

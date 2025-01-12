@@ -9,7 +9,7 @@ endif
 all: lib examples
 
 lib:
-	gcc src/sr3am.c -c -o sr3am.o -g -O0
+	gcc src/sr3am.c -c -o sr3am.o -g -Ofast -std=gnu2x
 
 # This will randomly delete files and shit? wtf?
 # %.o: examples/*.c
@@ -20,4 +20,4 @@ examples:
 	gcc examples/pong.c -o pong.o sr3am.o -I include $(lib) -g
 	ld -r -o embeds.o -z noexecstack -b binary examples/opencl.cl
 	objcopy --rename-section .data=.rodata,alloc,load,readonly,data,contents embeds.o
-	gcc examples/opencl.c -o opencl.o sr3am.o embeds.o -I include $(lib) -l OpenCL -g
+	gcc examples/opencl.c -o opencl.o sr3am.o embeds.o -I include $(lib) -l OpenCL -g -Ofast

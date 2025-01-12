@@ -6,6 +6,7 @@
 #include <X11/Xos.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 
 struct samImage_str {
   Display *dis;
@@ -22,7 +23,7 @@ struct samImage_str {
   uint32_t width,nwidth;   // the new width
   uint32_t height,nheight; // the new height
 
-  struct timeval lastf;
+  struct timespec lastf;
 
   int outofdate;
 
@@ -82,7 +83,7 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
   ret->mousex = 0;
   ret->mousey = 0;
 
-  gettimeofday(&ret->lastf, NULL);
+  clock_gettime(CLOCK_MONOTONIC, &ret->lastf);
 
   return ret;
 }
@@ -181,7 +182,7 @@ void samUpdate(struct samImage_str *window) {
   XFlush(window->dis);
 }
 
-uint64_t samUpdatePerf(struct samImage_str *window) {
+uint64_t samUpdatePerf(struct samImage_str *window, unsigned int showperf) {
   struct rgba *pixels = (struct rgba *) window->bitmapdata;
   for (int loop=0;loop<window->width*window->height;loop++) {
     unsigned char r = pixels[loop].r;
@@ -194,17 +195,24 @@ uint64_t samUpdatePerf(struct samImage_str *window) {
   memset(pixels, 0, window->width*window->height*4);
 
   // get time
-  struct timeval t1;
-  gettimeofday(&t1, NULL);
-  uint64_t timetaken = ((t1.tv_sec - window->lastf.tv_sec) * 1000000) + (t1.tv_usec - window->lastf.tv_usec); // ((current seconds - previous seconds) -> usec) + (current usec - last usec)
-  window->lastf = t1;
+  struct timespec tp;
+  uint64_t timetaken;
+  clock_gettime(CLOCK_MONOTONIC,&tp);
+  timetaken = ((tp.tv_sec - window->lastf.tv_sec) * 1000000000) + (tp.tv_nsec - window->lastf.tv_nsec);
+  window->lastf = tp;
+
+  if (showperf & 1) {
+    char buffer[128];
+    // timeofday only has millisecond precision
+    sprintf(buffer, "Via %-8s |  | ms %.2f", "X11", (float) timetaken/1000000);
+    XDrawImageString(window->dis, window->win, window->gc, 0, 12, buffer, strlen(buffer));
+  }
 
   if (window->outofdate) {
-    // will haved to create a new image
-    free(window->bitmapdata);
+    // will haved to resize the image
     window->width = window->nwidth;
     window->height = window->nheight;
-    window->bitmapdata = malloc(window->width*window->height*4);
+    window->bitmapdata = realloc(window->bitmapdata, window->width*window->height*4);
     window->outofdate = 0;
   }
   XFlush(window->dis);
