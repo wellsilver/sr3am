@@ -18,6 +18,10 @@ lib:
 examples:
 	gcc examples/blank.c -o blank.o sr3am.o -I include $(lib) -g
 	gcc examples/pong.c -o pong.o sr3am.o -I include $(lib) -g
+ifeq ($(OS),Windows_NT)
+	ld -r -o embeds.o -b binary examples/opencl.cl
+else
 	ld -r -o embeds.o -z noexecstack -b binary examples/opencl.cl
+endif
 	objcopy --rename-section .data=.rodata,alloc,load,readonly,data,contents embeds.o
 	gcc examples/opencl.c -o opencl.o sr3am.o embeds.o -I include $(lib) -l OpenCL -g -Ofast

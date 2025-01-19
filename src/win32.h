@@ -9,6 +9,8 @@ struct samImage_str {
   uint32_t width;
   uint32_t height;
   void *pixels;
+  uint64_t sizekeys;
+  signed int *keys;
 };
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -28,6 +30,21 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       window->width = width;
       window->height = height;
       window->pixels = realloc(window->pixels, (width*height)*4);      
+      return 0;
+    case WM_KEYDOWN:
+      window->sizekeys++;
+      window->keys = realloc(window->keys, window->sizekeys * sizeof(signed int));
+      window->keys[window->sizekeys-1] = wParam;
+      return 0;
+    case WM_KEYUP:
+      for (uint64_t loop = 0; loop < window->sizekeys;loop++) {
+        if (window->keys[loop] == wParam) {wParam = -wParam;return 0;} // set the key as up
+        if (window->keys[loop] == -wParam) return 0; // the key is allready up, do nothing
+      }
+      // add the key
+      window->sizekeys++;
+      window->keys = realloc(window->keys, window->sizekeys * sizeof(signed int));
+      window->keys[window->sizekeys-1] = -wParam;
       return 0;
   }
   return DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -76,8 +93,19 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
 
   SetPropA(hwnd, "SR3AM", ret);
 
+  signed int *a = malloc(0);
+  ret->keys = a;
+
   ShowWindow(hwnd, SW_SHOWNORMAL);
 
+  return ret;
+}
+
+int32_t samKey(struct samImage_str *window) {
+  if (window->sizekeys == 0) return sam_null; // no key pressed
+  window->sizekeys--;
+  int32_t ret = window->keys[window->sizekeys];
+  window->keys = realloc(window->keys, (window->sizekeys * sizeof(signed int)));
   return ret;
 }
 
