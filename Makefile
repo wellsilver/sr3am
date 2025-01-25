@@ -10,6 +10,7 @@ all: lib examples
 
 lib:
 	gcc src/sr3am.c -c -o sr3am.o -g -Ofast -std=gnu2x
+	ar rcs libsr3am.a sr3am.o
 
 # This will randomly delete files and shit? wtf?
 # %.o: examples/*.c
