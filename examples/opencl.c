@@ -17,24 +17,23 @@ int main() {
   cl_command_queue commandq;      // compute command queue
   cl_program       program;       // compute program
   cl_kernel        compixel;       // compute kernel
-  printf("%p,%p\n", _binary_examples_opencl_cl_start, _binary_examples_opencl_cl_end);
 
   err = clGetPlatformIDs(1, &platform, NULL);
-  if (err != CL_SUCCESS) return -1;
+  if (err != CL_SUCCESS) {printf("No Opencl platform\n");return 1;}
   err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_DEFAULT, 1, &device_id, NULL);
   if (err != CL_SUCCESS) return -2;
   char name[32];
   clGetDeviceInfo(device_id, CL_DEVICE_NAME, 32, &name, NULL);
   printf("%s\n", name);
   context = clCreateContext(NULL, 1, &device_id, NULL, NULL, &err);
-  if (err != CL_SUCCESS) return -3;
+  if (err != CL_SUCCESS) return 3;
   commandq = clCreateCommandQueue(context, device_id, 0, &err);
-  if (err != CL_SUCCESS) return -4;
+  if (err != CL_SUCCESS) return 4;
   size_t clength = _binary_examples_opencl_cl_end - _binary_examples_opencl_cl_start;
   char *clcode = malloc(clength);
   memcpy(clcode, _binary_examples_opencl_cl_start, clength);
   program = clCreateProgramWithSource(context, 1, (const char **) &clcode, &clength, &err);
-  if (err != CL_SUCCESS) return -5;
+  if (err != CL_SUCCESS) return 5;
   err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
   if (err != CL_SUCCESS) {
     size_t len;
@@ -44,10 +43,10 @@ int main() {
     clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, len, buffer, NULL);
 
     printf("%s\n", buffer);
-    return -6;
+    return 6;
   }
   compixel = clCreateKernel(program, "pixel", &err);
-  if (err != CL_SUCCESS) return -7;
+  if (err != CL_SUCCESS) return 7;
 
   samImage win = samWindow("opencl test", 480, 480, 0, 0, 0);
   if (win==NULL) {printf("No window\n");return 0;}
@@ -70,9 +69,9 @@ int main() {
 
     // setup buffers
     clEnqueueWriteBuffer(commandq, widthgpu, CL_TRUE, 0, 4, &width, 0, NULL, NULL);
-    if (err != CL_SUCCESS) return -8;
+    if (err != CL_SUCCESS) return 8;
     clEnqueueWriteBuffer(commandq, heightgpu, CL_TRUE, 0, 4, &height, 0, NULL, NULL);
-    if (err != CL_SUCCESS) return -8;
+    if (err != CL_SUCCESS) return 8;
     
     worksize[0] = width;
     worksize[1] = height;
