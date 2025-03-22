@@ -18,8 +18,10 @@ int main() {
   cl_program       program;       // compute program
   cl_kernel        compixel;       // compute kernel
 
-  err = clGetPlatformIDs(1, &platform, NULL);
-  if (err != CL_SUCCESS) {printf("No Opencl platform\n");return 1;}
+  cl_uint numplatform;
+  err = clGetPlatformIDs(1, &platform, &numplatform);
+  if (err != CL_SUCCESS || numplatform == 0) {printf("No Opencl platform\n");return 1;}
+  
   err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_DEFAULT, 1, &device_id, NULL);
   if (err != CL_SUCCESS) return -2;
   char name[32];

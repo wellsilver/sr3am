@@ -203,7 +203,7 @@ uint64_t samUpdatePerf(struct samImage_str *window, unsigned int showperf) {
 
   if (showperf & 1) {
     char buffer[128];
-    sprintf(buffer, "Via %-8s |  | ms %.2f", "X11", (float) timetaken/1000000);
+    sprintf(buffer, "Via %-8s | ms %.2f", "X11", (float) timetaken/1000000);
     XDrawImageString(window->dis, window->win, window->gc, 0, 12, buffer, strlen(buffer));
   }
 
