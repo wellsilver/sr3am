@@ -1,5 +1,5 @@
 #include <sr3am.h>
-#define CL_TARGET_OPENCL_VERSION 120
+#define CL_TARGET_OPENCL_VERSION 110
 #include <CL/cl.h>
 
 #include <stdio.h>
@@ -58,8 +58,9 @@ int main() {
   // draw
   struct rgba *img;
   uint32_t width, height;
+  int sizesave = 0;
 
-  cl_mem pixelgpu = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 10000000*4, NULL, &err); // 40 megabytes (slighty more than enough for a 4k image)
+  cl_mem pixelgpu = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 0x10000000*4, NULL, &err); // 40 megabytes (slighty more than enough for a 4k image)
   cl_mem widthgpu = clCreateBuffer(context, CL_MEM_READ_ONLY, 4, NULL, &err);
   cl_mem heightgpu = clCreateBuffer(context, CL_MEM_READ_ONLY, 4, NULL, &err);
   err = clSetKernelArg(compixel, 0, sizeof(cl_mem), &pixelgpu);
@@ -69,11 +70,14 @@ int main() {
   while (!samClosing(win)) {
     img = samPixels(&width, &height, win);
 
-    // setup buffers
-    clEnqueueWriteBuffer(commandq, widthgpu, CL_TRUE, 0, 4, &width, 0, NULL, NULL);
-    if (err != CL_SUCCESS) return 8;
-    clEnqueueWriteBuffer(commandq, heightgpu, CL_TRUE, 0, 4, &height, 0, NULL, NULL);
-    if (err != CL_SUCCESS) return 8;
+    if (sizesave != width+height) {
+      // setup buffers
+      sizesave = width+height;
+      clEnqueueWriteBuffer(commandq, widthgpu, CL_TRUE, 0, 4, &width, 0, NULL, NULL);
+      if (err != CL_SUCCESS) return 8;
+      clEnqueueWriteBuffer(commandq, heightgpu, CL_TRUE, 0, 4, &height, 0, NULL, NULL);
+      if (err != CL_SUCCESS) return 8;
+    }
     
     worksize[0] = width;
     worksize[1] = height;
