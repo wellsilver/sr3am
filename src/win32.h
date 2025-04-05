@@ -104,11 +104,14 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
 }
 
 int32_t samKey(struct samImage_str *window) {
+  /*
   if (window->sizekeys == 0) return sam_null; // no key pressed
   window->sizekeys--;
   int32_t ret = window->keys[window->sizekeys];
   window->keys = realloc(window->keys, (window->sizekeys * sizeof(signed int)));
   return ret;
+  */
+  return 0;
 }
 
 void samClose(struct samImage_str *window) {
