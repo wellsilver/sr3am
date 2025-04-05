@@ -9,8 +9,8 @@ struct samImage_str {
   uint32_t width;
   uint32_t height;
   void *pixels;
-  uint64_t sizekeys;
-  signed int *keys;
+  //uint64_t sizekeys;
+  //signed int *keys;
 };
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -31,6 +31,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       window->height = height;
       window->pixels = realloc(window->pixels, (width*height)*4);      
       return 0;
+    /*
     case WM_KEYDOWN:
       window->sizekeys++;
       window->keys = realloc(window->keys, window->sizekeys * sizeof(signed int));
@@ -46,6 +47,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       window->keys = realloc(window->keys, window->sizekeys * sizeof(signed int));
       window->keys[window->sizekeys-1] = -wParam;
       return 0;
+    */
   }
   return DefWindowProc(hwnd, uMsg, wParam, lParam);
 };
