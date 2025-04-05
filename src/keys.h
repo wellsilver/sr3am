@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-static uint64_t *keys[3] = {
+static uint64_t keys[][3] = {
   // {SR3AM, LINUX, WINDOWS},
   {0, 0, 0}, // NULL
 };
