@@ -16,6 +16,7 @@ lib:
 # %.o: examples/*.c
 #	gcc -o $<.o $< -I include sr3am $(lib) -g
 
+.PHONY: examples
 examples:
 	gcc examples/blank.c -o blank.o sr3am.o -I include $(lib) -g
 	gcc examples/pong.c -o pong.o sr3am.o -I include $(lib) -g
