@@ -30,8 +30,8 @@ struct samImage_str {
   uint32_t mousex;
   uint32_t mousey;
 
-  // Keyboard buffer, Positive if currently held, Negative if released.
-  int32_t keys[16];
+  // Keyboard buffer, Positive if currently held, Negative if released. (use as if its 16 characters long) index 16 is null
+  int32_t keys[17];
 
   int closing;
 };
@@ -80,6 +80,7 @@ samImage samWindow(char *name, uint32_t width, uint32_t height, int32_t x, int32
 
   ret->mousex = 0;
   ret->mousey = 0;
+  ret->keys[16] = 0;
 
   clock_gettime(CLOCK_MONOTONIC, &ret->lastf);
 
@@ -112,13 +113,14 @@ void proccessevent(struct samImage_str *window, XEvent event) {
     for (unsigned int loop=0;loop<16;loop++) {
       if (window->keys[loop] == 0) window->keys[loop] = event.xkey.keycode;
     }
+    printf("keypress\n");
   }
   if (event.type == KeyRelease) {
     // On key released
     int freespot = -1;
     // If still in the keyboard buffer, change it to released
     for (unsigned int loop=0;loop<16;loop++) {
-      if (window->keys[loop] == event.xkey.keycode) window->keys[loop] = 0-window->keys[loop];
+      if (window->keys[loop] == event.xkey.keycode) {window->keys[loop] = 0-window->keys[loop];return;};
       if (window->keys[loop] == 0 && freespot == -1) freespot = loop;
     }
     // if it has been read from the keyboard buffer then put a new one in
@@ -140,10 +142,11 @@ void samWaitUser(struct samImage_str *window) {
 // Read the next key from the keyboard buffer, if negative it is released, if positive it is pressed.
 int32_t samKey(struct samImage_str *window) {
   int ret = window->keys[0];
-  window->keys[0] = 0;
-  // move backwards
-  for (int loop=1;loop<16 && window->keys[loop]!=0;loop++)
-    window->keys[loop-1] = window->keys[loop];
+
+  for (unsigned int loop=0;loop<16;loop++) {
+    window->keys[loop] = window->keys[loop+1];
+  }
+
   return ret;
 }
 
