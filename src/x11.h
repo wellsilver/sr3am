@@ -118,11 +118,6 @@ void proccessevent(struct samImage_str *window, XEvent event) {
   if (event.type == KeyRelease) {
     // On key released
     int freespot = -1;
-    // If still in the keyboard buffer, change it to released
-    for (unsigned int loop=0;loop<16;loop++) {
-      if (window->keys[loop] == event.xkey.keycode) {window->keys[loop] = 0-window->keys[loop];return;};
-      if (window->keys[loop] == 0 && freespot == -1) freespot = loop;
-    }
     // if it has been read from the keyboard buffer then put a new one in
     window->keys[freespot] = 0 - ((int32_t) event.xkey.keycode);
     printf("keyrelease\n");
@@ -143,9 +138,7 @@ void samWaitUser(struct samImage_str *window) {
 int32_t samKey(struct samImage_str *window) {
   int ret = window->keys[0];
 
-  for (unsigned int loop=0;loop<16;loop++) {
-    window->keys[loop] = window->keys[loop+1];
-  }
+  window->keys
 
   return ret;
 }
