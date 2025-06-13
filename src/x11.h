@@ -111,13 +111,11 @@ void proccessevent(struct samImage_str *window, XEvent event) {
     // On key pressed
     for (unsigned int loop=0;loop<16;loop++)
       if (window->keys[loop] == 0) {window->keys[loop] = event.xkey.keycode;break;}
-    printf("keypress\n");
   }
   if (event.type == KeyRelease) {
     // On key released
     for (unsigned int loop=0;loop<16;loop++)
       if (window->keys[loop] == 0) {window->keys[loop] = 0-event.xkey.keycode;break;}
-    printf("keyrelease\n");
   }
 }
 
