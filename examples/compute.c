@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+struct rgba {unsigned char r,g,b,a;};
+
 // Vulkan example renderer, using SR3AM and no instance or device extensions. (It draws to fb in normal ram using compute shader)
 
 int main() {
@@ -148,40 +150,10 @@ int main() {
     return 1;
   }
 
-  VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-  pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  pipelineLayoutInfo.setLayoutCount = 0;
-
-  VkPipelineLayout pipelinelayout;
-  err = vkCreatePipelineLayout(device, &pipelineLayoutInfo, NULL, &pipelinelayout);
-  if (err != VK_SUCCESS) {
-    printf("Err vkCreatePipelineLayout %i\n", err);
-
-    return 1;
-  }
-
-  VkPipelineShaderStageCreateInfo shaderStageInfo = {};
-  shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-  shaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-  shaderStageInfo.module = shader;
-  shaderStageInfo.pName = "main";
-
-  VkComputePipelineCreateInfo pipelineInfo = {};
-  pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-  pipelineInfo.stage = shaderStageInfo;
-  pipelineInfo.layout = pipelinelayout;
-
-  VkPipeline computepipeline;
-  err = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &computepipeline);
-  if (err != VK_SUCCESS) {
-    printf("Err vkCreateComputePipelines %i\n", err);
-
-    return 1;
-  }
-
   VkCommandPoolCreateInfo commandpoolcreateinfo = {};
   commandpoolcreateinfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
   commandpoolcreateinfo.queueFamilyIndex = queueCreateInfo.queueFamilyIndex;
+  commandpoolcreateinfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
   VkCommandPool commandpool;
   err = vkCreateCommandPool(device, &commandpoolcreateinfo, NULL, &commandpool);
@@ -211,48 +183,236 @@ int main() {
   commandbufferbegininfo.pInheritanceInfo = &commandbufferinheritanceinfo;
   commandbufferbegininfo.flags = 0;
 
-  err = vkBeginCommandBuffer(commandbuffer, &commandbufferbegininfo);
-  if (err != VK_SUCCESS) {
-    printf("Err vkBeginCommandBuffer %i\n", err);
-
-    return 1;
-  }
-
-  vkCmdBindPipeline(commandbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computepipeline);
-  vkCmdDispatch(commandbuffer, 12, 1, 1);
-
-  err = vkEndCommandBuffer(commandbuffer);
-  if (err != VK_SUCCESS) {
-    printf("Err vkEndCommandBuffer %i\n", err);
-
-    return 1;
-  }
-
   VkSubmitInfo queuesubmitinfo = {};
   queuesubmitinfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   queuesubmitinfo.commandBufferCount = 1;
   queuesubmitinfo.pCommandBuffers = &commandbuffer;
 
-  VkFenceCreateInfo fencecreateinfo = {};
-  fencecreateinfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-  VkFence fence;
-  vkCreateFence(device, &fencecreateinfo, NULL, &fence);
-  
-  err = vkQueueSubmit(devicequeue, 1, &queuesubmitinfo, fence);
-  if (err != VK_SUCCESS) {
-    printf("Err vkQueueSubmit %i\n", err);
-
-    return 1;
+  samImage window = samWindow("SR3AM Compute", 480, 480, -1, -1, 0);
+  // returns NULL if failed
+  if (window == NULL) {
+    fwrite("Could not create window", 24, 1, stderr);
+    return -1;
   }
 
-  vkWaitForFences(device, 1, &fence, VK_TRUE, 0);
-  printf("Done\n");
+  uint32_t width, height;
+  uint64_t pos = 0; // camera position (X)
+
+  while (!samClosing(window)) {
+    struct rgba *px = samPixels(&width, &height, window);
+
+    // From here on is to setup the image
+    VkImageCreateInfo imagecreateinfo = {};
+    imagecreateinfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imagecreateinfo.imageType = VK_IMAGE_TYPE_2D;
+    imagecreateinfo.extent = (VkExtent3D) {.depth = 1, .height = height, .width = width};
+    imagecreateinfo.mipLevels = 1;
+    imagecreateinfo.arrayLayers = 1;
+    imagecreateinfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+    imagecreateinfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imagecreateinfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imagecreateinfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+    imagecreateinfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imagecreateinfo.samples = VK_SAMPLE_COUNT_1_BIT;
+
+    VkImage image;
+    err = vkCreateImage(device, &imagecreateinfo, NULL, &image);
+    if (err != VK_SUCCESS) {
+      printf("Err vkCreateImage %i\n", err);
+
+      return 1;
+    }
+
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(device, image, &memRequirements);
+
+    VkMemoryAllocateInfo memallocInfo = {};
+    memallocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memallocInfo.allocationSize = memRequirements.size;
+    memallocInfo.memoryTypeIndex = 0; // Sit and pray this works? lmao
+
+    VkDeviceMemory imagememory;
+    err = vkAllocateMemory(device, &memallocInfo, NULL, &imagememory);
+    if (err != VK_SUCCESS) {
+      printf("Err vkAllocateMemory %i\n", err);
+
+      return 1;
+    }
+
+    vkBindImageMemory(device, image, imagememory, 0);
+
+    VkImageViewCreateInfo viewCreateInfo = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+      .image = image,
+      .viewType = VK_IMAGE_VIEW_TYPE_2D,
+      .format = VK_FORMAT_R8G8B8A8_UNORM,
+      .subresourceRange = {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 1,
+      },
+    };
+
+    VkImageView imageview;
+    vkCreateImageView(device, &viewCreateInfo, NULL, &imageview);
+    // Done setting up image
+
+    VkDescriptorSetLayoutBinding imageBinding = {
+      .binding = 0,
+      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+      .descriptorCount = 1,
+      .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+    };
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo = {
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+      .bindingCount = 1,
+      .pBindings = &imageBinding,
+    };
+
+    VkDescriptorSetLayout descriptorSetLayout;
+    err = vkCreateDescriptorSetLayout(device, &layoutInfo, NULL, &descriptorSetLayout);
+    if (err != VK_SUCCESS) {
+      printf("Err vkCreateDescriptorSetLayout %i\n", err);
+
+      return 1;
+    }
+
+    VkPushConstantRange pushConstantRange = {
+      .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+      .offset = 0,
+      .size = sizeof(uint32_t),
+    };
+
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+
+    VkPipelineLayout pipelinelayout;
+    err = vkCreatePipelineLayout(device, &pipelineLayoutInfo, NULL, &pipelinelayout);
+    if (err != VK_SUCCESS) {
+      printf("Err vkCreatePipelineLayout %i\n", err);
+
+      return 1;
+    }
+
+    VkDescriptorPoolSize poolSize = {
+      .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+      .descriptorCount = 1,
+    };
+
+    VkDescriptorPoolCreateInfo poolCreateInfo = {
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+      .poolSizeCount = 1,
+      .pPoolSizes = &poolSize,
+      .maxSets = 1,
+    };
+
+    VkDescriptorPool descriptorPool;
+    vkCreateDescriptorPool(device, &poolCreateInfo, NULL, &descriptorPool);
+
+    VkDescriptorSetAllocateInfo descallocInfo = {
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+      .descriptorPool = descriptorPool,
+      .descriptorSetCount = 1,
+      .pSetLayouts = &descriptorSetLayout,
+    };
+
+    VkDescriptorSet descriptorSet;
+    vkAllocateDescriptorSets(device, &descallocInfo, &descriptorSet);
+
+    VkDescriptorImageInfo imageInfo = {
+      .imageView = imageview,
+      .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+    };
+
+    VkWriteDescriptorSet descriptorWrite = {
+      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      .dstSet = descriptorSet,
+      .dstBinding = 0,
+      .descriptorCount = 1,
+      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+      .pImageInfo = &imageInfo,
+    };
+
+    vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, NULL);
+
+    VkPipelineShaderStageCreateInfo shaderStageInfo = {};
+    shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    shaderStageInfo.module = shader;
+    shaderStageInfo.pName = "main";
+
+    VkComputePipelineCreateInfo pipelineInfo = {};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    pipelineInfo.stage = shaderStageInfo;
+    pipelineInfo.layout = pipelinelayout;
+
+    VkPipeline computepipeline;
+    err = vkCreateComputePipelines(device, NULL, 1, &pipelineInfo, NULL, &computepipeline);
+    if (err != VK_SUCCESS) {
+      printf("Err vkCreateComputePipelines %i\n", err);
+
+      return 1;
+    }
+
+    err = vkBeginCommandBuffer(commandbuffer, &commandbufferbegininfo);
+    if (err != VK_SUCCESS) {
+      printf("Err vkBeginCommandBuffer %i\n", err);
+
+      return 1;
+    }
+
+    vkCmdBindPipeline(commandbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computepipeline);
+    
+    vkCmdPushConstants(commandbuffer, pipelinelayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, 4, &pos);
+    vkCmdBindDescriptorSets(commandbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelinelayout, 0, 1, &descriptorSet, 0, NULL);
+    vkCmdDispatch(commandbuffer, width, height, 1);
+    
+
+    err = vkEndCommandBuffer(commandbuffer);
+    if (err != VK_SUCCESS) {
+      printf("Err vkEndCommandBuffer %i\n", err);
+
+      return 1;
+    }
+
+    err = vkQueueSubmit(devicequeue, 1, &queuesubmitinfo, NULL);
+    if (err != VK_SUCCESS) {
+      printf("Err vkQueueSubmit %i\n", err);
+
+      return 1;
+    }
+
+    vkQueueWaitIdle(devicequeue);
+    struct rgba *map;
+    vkMapMemory(device, imagememory, 0, memRequirements.size, 0, (void **) &map);
+    for (unsigned int loop=0;loop<width*height;loop++) {
+      px[loop] = map[loop];
+    }
+    vkUnmapMemory(device, imagememory);
+    vkResetCommandBuffer(commandbuffer, 0);
+    vkDestroyImage(device, image, NULL);
+    vkDestroyPipeline(device, computepipeline, NULL);
+    vkDestroyPipelineLayout(device, pipelinelayout, NULL);
+    vkDestroyDescriptorPool(device, descriptorPool, NULL);
+    vkDestroyDescriptorSetLayout(device, descriptorSetLayout, NULL);
+    vkFreeMemory(device, imagememory, NULL);
+    samUpdate(window);
+    samWait(window);
+    pos++;
+  }
+
+  samClose(window);
+
 
   vkDeviceWaitIdle(device);
-  vkDestroyFence(device, fence, NULL);
   vkDestroyCommandPool(device, commandpool, NULL);
-  vkDestroyPipeline(device, computepipeline, NULL);
-  vkDestroyPipelineLayout(device, pipelinelayout, NULL);
   vkDestroyShaderModule(device, shader, NULL);
   vkDestroyDevice(device, NULL);
   vkDestroyInstance(instance, NULL);
