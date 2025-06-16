@@ -196,169 +196,190 @@ int main() {
   }
 
   uint32_t width, height;
+  uint64_t oldsize;
   uint64_t pos = 0; // camera position (X)
+
+  VkImage image = 0;
+  VkImageView imageview;
+  VkDeviceMemory imagememory;
+  VkPipelineLayout pipelinelayout;
+  VkPipeline computepipeline;
+  VkDescriptorPool descriptorPool;
+  VkDescriptorSetLayout descriptorSetLayout;
+  VkDescriptorSet descriptorSet;
 
   while (!samClosing(window)) {
     struct rgba *px = samPixels(&width, &height, window);
+    
+    if (width+height != oldsize) {
+      oldsize = width+height;
 
-    // From here on is to setup the image
-    VkImageCreateInfo imagecreateinfo = {};
-    imagecreateinfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imagecreateinfo.imageType = VK_IMAGE_TYPE_2D;
-    imagecreateinfo.extent = (VkExtent3D) {.depth = 1, .height = height, .width = width};
-    imagecreateinfo.mipLevels = 1;
-    imagecreateinfo.arrayLayers = 1;
-    imagecreateinfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-    imagecreateinfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    imagecreateinfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imagecreateinfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
-    imagecreateinfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imagecreateinfo.samples = VK_SAMPLE_COUNT_1_BIT;
+      if (image == 0) {
+        vkDestroyImageView(device, imageview, NULL);
+        vkDestroyImage(device, image, NULL);
+        vkDestroyPipeline(device, computepipeline, NULL);
+        vkDestroyDescriptorPool(device, descriptorPool, NULL);
+        vkDestroyDescriptorSetLayout(device, descriptorSetLayout, NULL);
+        vkDestroyPipelineLayout(device, pipelinelayout, NULL);
+        vkFreeMemory(device, imagememory, NULL);
+      }
 
-    VkImage image;
-    err = vkCreateImage(device, &imagecreateinfo, NULL, &image);
-    if (err != VK_SUCCESS) {
-      printf("Err vkCreateImage %i\n", err);
+      // From here on is to setup the image
+      VkImageCreateInfo imagecreateinfo = {};
+      imagecreateinfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+      imagecreateinfo.imageType = VK_IMAGE_TYPE_2D;
+      imagecreateinfo.extent = (VkExtent3D) {.depth = 1, .height = height, .width = width};
+      imagecreateinfo.mipLevels = 1;
+      imagecreateinfo.arrayLayers = 1;
+      imagecreateinfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+      imagecreateinfo.tiling = VK_IMAGE_TILING_LINEAR;
+      imagecreateinfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+      imagecreateinfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+      imagecreateinfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+      imagecreateinfo.samples = VK_SAMPLE_COUNT_1_BIT;
 
-      return 1;
-    }
+      err = vkCreateImage(device, &imagecreateinfo, NULL, &image);
+      if (err != VK_SUCCESS) {
+        printf("Err vkCreateImage %i\n", err);
 
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(device, image, &memRequirements);
+        return 1;
+      }
 
-    VkMemoryAllocateInfo memallocInfo = {};
-    memallocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    memallocInfo.allocationSize = memRequirements.size;
-    memallocInfo.memoryTypeIndex = 0; // Sit and pray this works? lmao
+      VkMemoryRequirements memRequirements;
+      vkGetImageMemoryRequirements(device, image, &memRequirements);
 
-    VkDeviceMemory imagememory;
-    err = vkAllocateMemory(device, &memallocInfo, NULL, &imagememory);
-    if (err != VK_SUCCESS) {
-      printf("Err vkAllocateMemory %i\n", err);
+      VkMemoryAllocateInfo memallocInfo = {};
+      memallocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+      memallocInfo.allocationSize = memRequirements.size;
 
-      return 1;
-    }
+      VkPhysicalDeviceMemoryProperties memproperty;
+      vkGetPhysicalDeviceMemoryProperties(devices[selecteddevice], &memproperty);
+      for (unsigned int loop=0;loop<memproperty.memoryTypeCount;loop++)
+        if (memproperty.memoryTypes[loop].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {memallocInfo.memoryTypeIndex = loop;break;};
 
-    vkBindImageMemory(device, image, imagememory, 0);
+      err = vkAllocateMemory(device, &memallocInfo, NULL, &imagememory);
+      if (err != VK_SUCCESS) {
+        printf("Err vkAllocateMemory %i\n", err);
 
-    VkImageViewCreateInfo viewCreateInfo = {
-      .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-      .image = image,
-      .viewType = VK_IMAGE_VIEW_TYPE_2D,
-      .format = VK_FORMAT_R8G8B8A8_UNORM,
-      .subresourceRange = {
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .baseMipLevel = 0,
-        .levelCount = 1,
-        .baseArrayLayer = 0,
-        .layerCount = 1,
-      },
-    };
+        return 1;
+      }
 
-    VkImageView imageview;
-    vkCreateImageView(device, &viewCreateInfo, NULL, &imageview);
-    // Done setting up image
+      vkBindImageMemory(device, image, imagememory, 0);
 
-    VkDescriptorSetLayoutBinding imageBinding = {
-      .binding = 0,
-      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-      .descriptorCount = 1,
-      .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
-    };
+      VkImageViewCreateInfo viewCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .subresourceRange = {
+          .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+          .baseMipLevel = 0,
+          .levelCount = 1,
+          .baseArrayLayer = 0,
+          .layerCount = 1,
+        },
+      };
 
-    VkDescriptorSetLayoutCreateInfo layoutInfo = {
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-      .bindingCount = 1,
-      .pBindings = &imageBinding,
-    };
+      vkCreateImageView(device, &viewCreateInfo, NULL, &imageview);
+      // Done setting up image
 
-    VkDescriptorSetLayout descriptorSetLayout;
-    err = vkCreateDescriptorSetLayout(device, &layoutInfo, NULL, &descriptorSetLayout);
-    if (err != VK_SUCCESS) {
-      printf("Err vkCreateDescriptorSetLayout %i\n", err);
+      VkDescriptorSetLayoutBinding imageBinding = {
+        .binding = 0,
+        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+      };
 
-      return 1;
-    }
+      VkDescriptorSetLayoutCreateInfo layoutInfo = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .bindingCount = 1,
+        .pBindings = &imageBinding,
+      };
 
-    VkPushConstantRange pushConstantRange = {
-      .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
-      .offset = 0,
-      .size = sizeof(uint32_t),
-    };
+      err = vkCreateDescriptorSetLayout(device, &layoutInfo, NULL, &descriptorSetLayout);
+      if (err != VK_SUCCESS) {
+        printf("Err vkCreateDescriptorSetLayout %i\n", err);
 
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-    pipelineLayoutInfo.pushConstantRangeCount = 1;
-    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+        return 1;
+      }
 
-    VkPipelineLayout pipelinelayout;
-    err = vkCreatePipelineLayout(device, &pipelineLayoutInfo, NULL, &pipelinelayout);
-    if (err != VK_SUCCESS) {
-      printf("Err vkCreatePipelineLayout %i\n", err);
+      VkPushConstantRange pushConstantRange = {
+        .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        .offset = 0,
+        .size = sizeof(uint32_t),
+      };
 
-      return 1;
-    }
+      VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+      pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+      pipelineLayoutInfo.setLayoutCount = 1;
+      pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+      pipelineLayoutInfo.pushConstantRangeCount = 1;
+      pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-    VkDescriptorPoolSize poolSize = {
-      .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-      .descriptorCount = 1,
-    };
+      err = vkCreatePipelineLayout(device, &pipelineLayoutInfo, NULL, &pipelinelayout);
+      if (err != VK_SUCCESS) {
+        printf("Err vkCreatePipelineLayout %i\n", err);
 
-    VkDescriptorPoolCreateInfo poolCreateInfo = {
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-      .poolSizeCount = 1,
-      .pPoolSizes = &poolSize,
-      .maxSets = 1,
-    };
+        return 1;
+      }
 
-    VkDescriptorPool descriptorPool;
-    vkCreateDescriptorPool(device, &poolCreateInfo, NULL, &descriptorPool);
+      VkDescriptorPoolSize poolSize = {
+        .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        .descriptorCount = 1,
+      };
 
-    VkDescriptorSetAllocateInfo descallocInfo = {
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-      .descriptorPool = descriptorPool,
-      .descriptorSetCount = 1,
-      .pSetLayouts = &descriptorSetLayout,
-    };
+      VkDescriptorPoolCreateInfo poolCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .poolSizeCount = 1,
+        .pPoolSizes = &poolSize,
+        .maxSets = 1,
+      };
 
-    VkDescriptorSet descriptorSet;
-    vkAllocateDescriptorSets(device, &descallocInfo, &descriptorSet);
+      vkCreateDescriptorPool(device, &poolCreateInfo, NULL, &descriptorPool);
 
-    VkDescriptorImageInfo imageInfo = {
-      .imageView = imageview,
-      .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-    };
+      VkDescriptorSetAllocateInfo descallocInfo = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .descriptorPool = descriptorPool,
+        .descriptorSetCount = 1,
+        .pSetLayouts = &descriptorSetLayout,
+      };
 
-    VkWriteDescriptorSet descriptorWrite = {
-      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-      .dstSet = descriptorSet,
-      .dstBinding = 0,
-      .descriptorCount = 1,
-      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-      .pImageInfo = &imageInfo,
-    };
+      vkAllocateDescriptorSets(device, &descallocInfo, &descriptorSet);
 
-    vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, NULL);
+      VkDescriptorImageInfo imageInfo = {
+        .imageView = imageview,
+        .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+      };
 
-    VkPipelineShaderStageCreateInfo shaderStageInfo = {};
-    shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    shaderStageInfo.module = shader;
-    shaderStageInfo.pName = "main";
+      VkWriteDescriptorSet descriptorWrite = {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = descriptorSet,
+        .dstBinding = 0,
+        .descriptorCount = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        .pImageInfo = &imageInfo,
+      };
 
-    VkComputePipelineCreateInfo pipelineInfo = {};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    pipelineInfo.stage = shaderStageInfo;
-    pipelineInfo.layout = pipelinelayout;
+      vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, NULL);
 
-    VkPipeline computepipeline;
-    err = vkCreateComputePipelines(device, NULL, 1, &pipelineInfo, NULL, &computepipeline);
-    if (err != VK_SUCCESS) {
-      printf("Err vkCreateComputePipelines %i\n", err);
+      VkPipelineShaderStageCreateInfo shaderStageInfo = {};
+      shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+      shaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+      shaderStageInfo.module = shader;
+      shaderStageInfo.pName = "main";
 
-      return 1;
+      VkComputePipelineCreateInfo pipelineInfo = {};
+      pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+      pipelineInfo.stage = shaderStageInfo;
+      pipelineInfo.layout = pipelinelayout;
+
+      err = vkCreateComputePipelines(device, NULL, 1, &pipelineInfo, NULL, &computepipeline);
+      if (err != VK_SUCCESS) {
+        printf("Err vkCreateComputePipelines %i\n", err);
+
+        return 1;
+      }
+
     }
 
     err = vkBeginCommandBuffer(commandbuffer, &commandbufferbegininfo);
@@ -372,8 +393,31 @@ int main() {
     
     vkCmdPushConstants(commandbuffer, pipelinelayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, 4, &pos);
     vkCmdBindDescriptorSets(commandbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelinelayout, 0, 1, &descriptorSet, 0, NULL);
+    VkImageMemoryBarrier barrier = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+      .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+      .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+      .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .image = image,
+      .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+      .subresourceRange.baseMipLevel = 0,
+      .subresourceRange.levelCount = 1,
+      .subresourceRange.baseArrayLayer = 0,
+      .subresourceRange.layerCount = 1,
+      .srcAccessMask = 0,
+      .dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
+    };
+    vkCmdPipelineBarrier(
+      commandbuffer,
+      VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,   // srcStage
+      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,// dstStage
+      0,
+      0, NULL,
+      0, NULL,
+      1, &barrier
+    );
     vkCmdDispatch(commandbuffer, width, height, 1);
-    
 
     err = vkEndCommandBuffer(commandbuffer);
     if (err != VK_SUCCESS) {
@@ -391,19 +435,12 @@ int main() {
 
     vkQueueWaitIdle(devicequeue);
     struct rgba *map;
-    vkMapMemory(device, imagememory, 0, memRequirements.size, 0, (void **) &map);
-    for (unsigned int loop=0;loop<width*height;loop++) {
-      px[loop] = map[loop];
-    }
+    vkMapMemory(device, imagememory, 0, width*height*4, 0, (void **) &map);
+    memcpy(px, map, width*height*4);
     vkUnmapMemory(device, imagememory);
+
     vkResetCommandBuffer(commandbuffer, 0);
-    vkDestroyImage(device, image, NULL);
-    vkDestroyPipeline(device, computepipeline, NULL);
-    vkDestroyPipelineLayout(device, pipelinelayout, NULL);
-    vkDestroyDescriptorPool(device, descriptorPool, NULL);
-    vkDestroyDescriptorSetLayout(device, descriptorSetLayout, NULL);
-    vkFreeMemory(device, imagememory, NULL);
-    samUpdate(window);
+    samUpdatePerf(window, 1);
     samWait(window);
     pos++;
   }
@@ -412,6 +449,13 @@ int main() {
 
 
   vkDeviceWaitIdle(device);
+  vkDestroyImageView(device, imageview, NULL);
+  vkDestroyImage(device, image, NULL);
+  vkDestroyPipeline(device, computepipeline, NULL);
+  vkDestroyPipelineLayout(device, pipelinelayout, NULL);
+  vkDestroyDescriptorPool(device, descriptorPool, NULL);
+  vkDestroyDescriptorSetLayout(device, descriptorSetLayout, NULL);
+  vkFreeMemory(device, imagememory, NULL);
   vkDestroyCommandPool(device, commandpool, NULL);
   vkDestroyShaderModule(device, shader, NULL);
   vkDestroyDevice(device, NULL);
