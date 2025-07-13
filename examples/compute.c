@@ -195,7 +195,6 @@ int main() {
     return -1;
   }
 
-  uint32_t width, height;
   uint64_t oldsize;
   uint64_t pos = 0; // camera position (X)
 
@@ -207,13 +206,19 @@ int main() {
   VkDescriptorSetLayout descriptorSetLayout;
   VkDescriptorSet descriptorSet;
 
-  while (!samClosing(window)) {
-    struct rgba *px = samPixels(&width, &height, window);
-    
-    if (width+height != oldsize) {
-      oldsize = width+height;
+  struct __constants_t {
+    uint32_t x,y;
+    uint32_t width,height;
+  } constants;
 
-      if (imagememory == 0) {
+  while (!samClosing(window)) {
+    struct rgba *px = samPixels(&constants.width, &constants.height, window);
+    
+    if (constants.width+constants.height != oldsize) {
+      oldsize = constants.width+constants.height;
+
+      if (imagememory != 0) {
+        vkDestroyBuffer(device, buffer, NULL);
         vkDestroyPipeline(device, computepipeline, NULL);
         vkDestroyDescriptorPool(device, descriptorPool, NULL);
         vkDestroyDescriptorSetLayout(device, descriptorSetLayout, NULL);
@@ -223,7 +228,7 @@ int main() {
 
       VkMemoryAllocateInfo memallocInfo = {};
       memallocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-      memallocInfo.allocationSize = width*height*4;
+      memallocInfo.allocationSize = constants.width*constants.height*4;
 
       VkPhysicalDeviceMemoryProperties memproperty;
       vkGetPhysicalDeviceMemoryProperties(devices[selecteddevice], &memproperty);
@@ -260,7 +265,7 @@ int main() {
       VkPushConstantRange pushConstantRange = {
         .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
         .offset = 0,
-        .size = sizeof(uint32_t),
+        .size = sizeof(constants),
       };
 
       VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
@@ -278,7 +283,7 @@ int main() {
       }
 
       VkDescriptorPoolSize poolSize = {
-        .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
         .descriptorCount = 1,
       };
 
@@ -301,16 +306,16 @@ int main() {
       vkAllocateDescriptorSets(device, &descallocInfo, &descriptorSet);
 
       VkBufferCreateInfo buffercreateinfo = {.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-      buffercreateinfo.size = width*height*4;
+      buffercreateinfo.size = constants.width*constants.height*4;
       buffercreateinfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-      buffercreateinfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+      buffercreateinfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
       vkCreateBuffer(device, &buffercreateinfo, NULL, &buffer);
       vkBindBufferMemory(device, buffer, imagememory, 0);
 
       VkDescriptorBufferInfo imageinfo = {};
       imageinfo.buffer = buffer;
       imageinfo.offset = 0;
-      imageinfo.range = width*height*4;
+      imageinfo.range = constants.width*constants.height*4;
 
       VkWriteDescriptorSet descriptorWrite = {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -351,10 +356,11 @@ int main() {
     }
 
     vkCmdBindPipeline(commandbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computepipeline);
-    
-    vkCmdPushConstants(commandbuffer, pipelinelayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, 4, &pos);
+
+    vkCmdPushConstants(commandbuffer, pipelinelayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(constants), &constants);
+
     vkCmdBindDescriptorSets(commandbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelinelayout, 0, 1, &descriptorSet, 0, NULL);
-    vkCmdDispatch(commandbuffer, width, height, 1);
+    vkCmdDispatch(commandbuffer, constants.width, constants.height, 1);
 
     err = vkEndCommandBuffer(commandbuffer);
     if (err != VK_SUCCESS) {
@@ -372,8 +378,8 @@ int main() {
 
     vkQueueWaitIdle(devicequeue);
     struct rgba *map;
-    vkMapMemory(device, imagememory, 0, width*height*4, 0, (void **) &map);
-    memcpy(px, map, width*height*4);
+    vkMapMemory(device, imagememory, 0, constants.width*constants.height*4, 0, (void **) &map);
+    memcpy(px, map, constants.width*constants.height*4);
     vkUnmapMemory(device, imagememory);
 
     vkResetCommandBuffer(commandbuffer, 0);
@@ -386,6 +392,7 @@ int main() {
 
 
   vkDeviceWaitIdle(device);
+  vkDestroyBuffer(device, buffer, NULL);
   vkDestroyPipeline(device, computepipeline, NULL);
   vkDestroyPipelineLayout(device, pipelinelayout, NULL);
   vkDestroyDescriptorPool(device, descriptorPool, NULL);

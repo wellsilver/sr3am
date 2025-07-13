@@ -5,12 +5,15 @@ layout(std430, binding = 0) buffer OutputImage {
 };
 
 layout(push_constant) uniform PushData {
-  uint posx;
+  uint x;
+  uint y;
+  uint w;
+  uint h;
 } pc;
 
 
 void main() {
-  uvec2 coord = gl_GlobalInvocationID.xy;
+  uint coord = gl_GlobalInvocationID.x + (gl_GlobalInvocationID.y*pc.w);
 
-  data[coord.x] = 255;
+  data[coord] = 255;
 }
