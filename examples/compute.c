@@ -307,7 +307,7 @@ int main() {
 
       VkBufferCreateInfo buffercreateinfo = {.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
       buffercreateinfo.size = constants.width*constants.height*4;
-      buffercreateinfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+      buffercreateinfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
       buffercreateinfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
       vkCreateBuffer(device, &buffercreateinfo, NULL, &buffer);
       vkBindBufferMemory(device, buffer, imagememory, 0);
@@ -360,7 +360,7 @@ int main() {
     vkCmdPushConstants(commandbuffer, pipelinelayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(constants), &constants);
 
     vkCmdBindDescriptorSets(commandbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelinelayout, 0, 1, &descriptorSet, 0, NULL);
-    vkCmdDispatch(commandbuffer, constants.width, constants.height, 1);
+    vkCmdDispatch(commandbuffer, constants.width*constants.height, 1, 1);
 
     err = vkEndCommandBuffer(commandbuffer);
     if (err != VK_SUCCESS) {
