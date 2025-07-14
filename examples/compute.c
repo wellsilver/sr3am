@@ -199,6 +199,7 @@ int main() {
   uint64_t pos = 0; // camera position (X)
 
   VkDeviceMemory imagememory = 0;
+  struct rgba *map; // imagememory mapped
   VkBuffer buffer;
   VkPipelineLayout pipelinelayout;
   VkPipeline computepipeline;
@@ -220,6 +221,7 @@ int main() {
       oldsize = constants.width+constants.height;
 
       if (imagememory != 0) {
+        vkUnmapMemory(device, imagememory);
         vkDestroyBuffer(device, buffer, NULL);
         vkDestroyPipeline(device, computepipeline, NULL);
         vkDestroyDescriptorPool(device, descriptorPool, NULL);
@@ -348,6 +350,7 @@ int main() {
         return 1;
       }
 
+      vkMapMemory(device, imagememory, 0, constants.width*constants.height*4, 0, (void **) &map);
     }
 
     err = vkBeginCommandBuffer(commandbuffer, &commandbufferbegininfo);
@@ -362,7 +365,7 @@ int main() {
     vkCmdPushConstants(commandbuffer, pipelinelayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(constants), &constants);
 
     vkCmdBindDescriptorSets(commandbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelinelayout, 0, 1, &descriptorSet, 0, NULL);
-    vkCmdDispatch(commandbuffer, constants.width*constants.height, 1, 1);
+    vkCmdDispatch(commandbuffer, (constants.width*constants.height)/256, 1, 1);
 
     err = vkEndCommandBuffer(commandbuffer);
     if (err != VK_SUCCESS) {
@@ -379,10 +382,7 @@ int main() {
     }
 
     vkQueueWaitIdle(devicequeue);
-    struct rgba *map;
-    vkMapMemory(device, imagememory, 0, constants.width*constants.height*4, 0, (void **) &map);
     memcpy(px, map, constants.width*constants.height*4);
-    vkUnmapMemory(device, imagememory);
 
     vkResetCommandBuffer(commandbuffer, 0);
     samUpdatePerf(window, 1);
