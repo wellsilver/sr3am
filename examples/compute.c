@@ -210,6 +210,8 @@ int main() {
     uint32_t x,y;
     uint32_t width,height;
   } constants;
+  constants.x = 0;
+  constants.y = 0;
 
   while (!samClosing(window)) {
     struct rgba *px = samPixels(&constants.width, &constants.height, window);
@@ -385,7 +387,7 @@ int main() {
     vkResetCommandBuffer(commandbuffer, 0);
     samUpdatePerf(window, 1);
     samWait(window);
-    pos++;
+    constants.x++;
   }
 
   samClose(window);
